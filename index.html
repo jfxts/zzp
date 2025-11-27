@@ -3,238 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>未应之境 | The Unanswered Realm</title>
+    <title>未应之境 | SYSTEM HUB</title>
     <style>
-        /* ----- 全局设置 ----- */
+        /* ----- 全局基础样式 ----- */
         :root {
             --bg-color: #05070a;
             --text-primary: #e0e6ed;
             --text-secondary: #94a3b8;
-            --accent-color: #64ffda;
+            --accent-color: #64ffda; /* 青色 */
+            --danger-color: #ff5f5f; /* 红色 */
+            --void-color: #a78bfa;   /* 紫色 */
             --glass-bg: rgba(255, 255, 255, 0.03);
             --glass-border: rgba(255, 255, 255, 0.05);
-            --modal-bg: rgba(5, 7, 10, 0.85);
+            --font-mono: 'Courier New', Courier, monospace;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; user-select: none; }
         
         body {
             background-color: var(--bg-color);
             color: var(--text-primary);
             font-family: 'PingFang SC', 'Helvetica Neue', sans-serif;
-            line-height: 1.8;
             overflow-x: hidden;
+            cursor: default;
         }
-
-        a { text-decoration: none; color: inherit; transition: 0.3s; }
-        ul { list-style: none; }
-        button { font-family: inherit; }
 
         /* ----- 背景动画画布 ----- */
         #canvas-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; opacity: 0.6;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; opacity: 0.6; pointer-events: none;
         }
 
-        /* ----- 导航栏 ----- */
+        /* ----- 顶部导航 ----- */
         nav {
             position: fixed; top: 0; width: 100%; padding: 2rem 4rem;
             display: flex; justify-content: space-between; align-items: center;
             z-index: 100; backdrop-filter: blur(5px);
         }
+        .logo { font-size: 1.5rem; letter-spacing: 4px; font-family: var(--font-mono); opacity: 0.9; }
+        .status-badge { 
+            font-family: var(--font-mono); font-size: 0.8rem; 
+            color: var(--accent-color); border: 1px solid var(--accent-color);
+            padding: 4px 12px; border-radius: 20px;
+        }
 
-        .logo { font-size: 1.5rem; font-weight: 300; letter-spacing: 4px; opacity: 0.8; }
-        .nav-links li { display: inline-block; margin-left: 3rem; font-size: 0.9rem; color: var(--text-secondary); cursor: pointer; }
-        .nav-links li:hover { color: var(--accent-color); }
-
-        /* ----- 通用布局 ----- */
+        /* ----- 主体布局 ----- */
         section {
             min-height: 100vh; display: flex; flex-direction: column;
             justify-content: center; padding: 0 10%; position: relative;
         }
 
-        /* ----- 1. 首页 (Hero) ----- */
         .hero h1 {
-            font-size: 5rem; font-weight: 200; line-height: 1.1; margin-bottom: 2rem;
+            font-size: 4rem; font-weight: 200; line-height: 1.1; margin-bottom: 1rem;
             background: linear-gradient(to right, #fff, #666);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            opacity: 0; transform: translateY(30px);
-            animation: fadeUp 1.5s ease forwards 0.5s;
+            animation: fadeUp 1.5s ease forwards;
         }
-
         .hero p {
-            font-size: 1.2rem; color: var(--text-secondary); max-width: 600px;
-            margin-bottom: 3rem; opacity: 0; transform: translateY(30px);
-            animation: fadeUp 1.5s ease forwards 0.8s;
+            font-size: 1rem; color: var(--text-secondary); max-width: 600px;
+            margin-bottom: 3rem; font-family: var(--font-mono);
+            animation: fadeUp 1.5s ease forwards 0.3s; opacity: 0;
         }
 
-        .btn-explore {
-            display: inline-block; padding: 1rem 2.5rem;
-            border: 1px solid var(--glass-border); background: var(--glass-bg);
-            color: var(--text-primary); letter-spacing: 2px; font-size: 0.9rem;
-            transition: 0.4s; opacity: 0; animation: fadeIn 2s ease forwards 1.2s;
-            cursor: pointer;
-        }
-        .btn-explore:hover { border-color: var(--accent-color); box-shadow: 0 0 20px rgba(100, 255, 218, 0.1); }
-
-        /* ----- 2. 独白 (About) ----- */
-        .section-title {
-            font-size: 4rem; opacity: 0.05; position: absolute;
-            top: 10%; left: 5%; font-weight: 900; z-index: -1;
-        }
-
-        .content-card {
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-            padding: 3rem; max-width: 800px; backdrop-filter: blur(10px);
-            transform: translateY(50px); opacity: 0; transition: 1s ease;
-        }
-        .content-card.visible { transform: translateY(0); opacity: 1; }
-        .quote {
-            font-style: italic; border-left: 2px solid var(--accent-color);
-            padding-left: 1.5rem; margin: 1.5rem 0; color: var(--text-secondary);
-        }
-
-        /* ----- 3. 足迹 (Works) ----- */
+        /* ----- 关卡卡片 Grid ----- */
         .grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem; margin-top: 2rem;
-        }
-
-        .grid-item {
-            background: rgba(255,255,255,0.02); border: 1px solid transparent;
-            padding: 2rem; height: 320px; display: flex; flex-direction: column;
-            justify-content: space-between; /* 修改为两端对齐 */
-            transition: 0.4s; position: relative; overflow: hidden;
-        }
-        .grid-item:hover {
-            border-color: var(--text-secondary); transform: translateY(-5px);
-            background: rgba(255,255,255,0.05);
-        }
-        .grid-item h3 { font-size: 1.5rem; margin-bottom: 0.5rem; margin-top: auto;}
-        .grid-item span { font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1px; display: block; margin-bottom: 1rem;}
-        
-        /* 交互按钮样式 */
-        .card-action-btn {
-            background: transparent; border: 1px solid var(--accent-color);
-            color: var(--accent-color); padding: 0.5rem 1rem;
-            margin-top: 1rem; cursor: pointer; opacity: 0.7; transition: 0.3s;
-            width: fit-content; font-size: 0.8rem; letter-spacing: 1px;
-        }
-        .card-action-btn:hover { opacity: 1; background: rgba(100, 255, 218, 0.1); }
-
-
-        /* ----- 4. 信号 (Contact) ----- */
-        .signal-container { text-align: center; }
-        .pulse {
-            width: 10px; height: 10px; background: var(--accent-color);
-            border-radius: 50%; margin: 0 auto 2rem;
-            box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.7);
-            animation: pulse-green 2s infinite;
-        }
-
-        /* ----- 音乐播放器样式 ----- */
-        .music-control {
-            position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px;
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-            border-radius: 50%; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; z-index: 999; backdrop-filter: blur(5px); transition: all 0.3s;
-        }
-        .music-control:hover { border-color: var(--accent-color); box-shadow: 0 0 15px rgba(100, 255, 218, 0.2); }
-        .sound-wave { display: flex; align-items: flex-end; height: 20px; gap: 3px; }
-        .bar { width: 3px; background: var(--text-primary); border-radius: 2px; height: 4px; }
-        .music-control.playing .bar { background: var(--accent-color); animation: equalize 1s infinite ease-in-out; }
-        .music-control.playing .bar:nth-child(1) { animation-delay: 0.1s; }
-        .music-control.playing .bar:nth-child(2) { animation-delay: 0.3s; }
-        .music-control.playing .bar:nth-child(3) { animation-delay: 0.5s; }
-        .music-control.playing .bar:nth-child(4) { animation-delay: 0.2s; }
-        .music-hint { position: fixed; bottom: 38px; right: 90px; font-size: 12px; color: var(--text-secondary); opacity: 0; transition: 0.5s; pointer-events: none; }
-        .music-control:hover + .music-hint { opacity: 1; }
-
-        /* ---------------- 笔记 Modal (弹窗) 样式 ---------------- */
-        .modal {
-            display: none; /* 默认隐藏 */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--modal-bg);
-            z-index: 2000;
-            backdrop-filter: blur(15px);
-            justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.5s;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem; margin-top: 1rem;
+            animation: fadeUp 1.5s ease forwards 0.6s; opacity: 0;
         }
         
-        .modal.active { display: flex; opacity: 1; }
-
-        .modal-content {
-            width: 80%; max-width: 600px;
-            background: rgba(10, 12, 16, 0.6);
+        .chapter-card {
+            background: rgba(255,255,255,0.02); 
             border: 1px solid var(--glass-border);
-            padding: 3rem;
-            position: relative;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            transform: scale(0.95); transition: transform 0.3s;
-        }
-        .modal.active .modal-content { transform: scale(1); }
-
-        .close-btn {
-            position: absolute; top: 1rem; right: 1.5rem;
-            font-size: 2rem; color: var(--text-secondary);
-            cursor: pointer; transition: 0.3s;
-        }
-        .close-btn:hover { color: #fff; }
-
-        .note-header {
-            font-size: 1.2rem; color: var(--accent-color);
-            margin-bottom: 1.5rem; letter-spacing: 2px;
-            border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;
+            padding: 2rem; height: 320px; 
+            display: flex; flex-direction: column; justify-content: space-between;
+            transition: 0.4s; position: relative; overflow: hidden; cursor: pointer;
         }
 
-        #note-area {
-            width: 100%; height: 300px;
-            background: transparent; border: none;
-            color: var(--text-primary); font-size: 1.1rem;
-            font-family: inherit; resize: none;
-            line-height: 1.6;
-        }
-        #note-area::placeholder { color: rgba(148, 163, 184, 0.3); font-style: italic; }
-
-        /* 滚动条美化 */
-        #note-area::-webkit-scrollbar { width: 5px; }
-        #note-area::-webkit-scrollbar-track { background: transparent; }
-        #note-area::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; }
-
-        .modal-actions {
-            margin-top: 2rem; display: flex; justify-content: flex-end; align-items: center;
-        }
-
-        .status-text {
-            margin-right: 1.5rem; font-size: 0.8rem; color: var(--text-secondary); opacity: 0; transition: 0.3s;
-        }
+        /* 卡片悬停效果 & 颜色变种 */
+        .chapter-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.04); }
         
-        .btn-save {
-            padding: 0.8rem 2rem; background: var(--glass-bg);
-            border: 1px solid var(--accent-color); color: var(--accent-color);
-            cursor: pointer; transition: all 0.3s; letter-spacing: 1px;
+        /* Chapter 1: Standard Green */
+        .chapter-card.c1:hover { border-color: var(--accent-color); box-shadow: 0 10px 30px rgba(100, 255, 218, 0.1); }
+        .chapter-card.c1 .chapter-status { color: var(--accent-color); border-color: var(--accent-color); }
+        .chapter-card.c1 .action-text { color: var(--accent-color); }
+
+        /* Chapter 2: Danger Red */
+        .chapter-card.c2:hover { border-color: var(--danger-color); box-shadow: 0 10px 30px rgba(255, 95, 95, 0.1); }
+        .chapter-card.c2 .chapter-status { color: var(--danger-color); border-color: var(--danger-color); }
+        .chapter-card.c2 .action-text { color: var(--danger-color); }
+
+        /* Chapter 3: Void Purple */
+        .chapter-card.c3:hover { border-color: var(--void-color); box-shadow: 0 10px 30px rgba(167, 139, 250, 0.1); }
+        .chapter-card.c3 .chapter-status { color: var(--void-color); border-color: var(--void-color); }
+        .chapter-card.c3 .action-text { color: var(--void-color); }
+
+        /* 卡片内部元素 */
+        .chapter-status { 
+            font-family: var(--font-mono); font-size: 0.7rem; 
+            border: 1px solid #555; color: #555;
+            padding: 2px 8px; width: fit-content; margin-bottom: 1rem; 
         }
-        .btn-save:hover { background: var(--accent-color); color: #000; box-shadow: 0 0 15px var(--accent-color); }
+        .chapter-card h2 { font-size: 2rem; margin-bottom: 0.5rem; font-weight: 300; }
+        .chapter-card p { font-size: 0.9rem; color: var(--text-secondary); }
+        .action-text { font-family: var(--font-mono); font-size: 0.8rem; text-align: right; letter-spacing: 1px; transition: 0.3s; }
+        .chapter-card:hover .action-text { letter-spacing: 3px; font-weight: bold; }
 
+        /* ----- 转场动画层 (Hyper Jump) ----- */
+        #warp-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+        .warp-tunnel {
+            width: 0; height: 2px; background: #fff;
+            box-shadow: 0 0 20px #fff, 0 0 50px var(--accent-color);
+            animation: expandLine 2s forwards cubic-bezier(0.7, 0, 0.3, 1);
+        }
+        .loading-text {
+            margin-top: 20px; font-family: var(--font-mono); font-size: 0.8rem;
+            color: #fff; opacity: 0; animation: fadeIn 0.5s forwards 0.5s;
+        }
 
-        /* ----- 动画关键帧 ----- */
-        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes expandLine { 0% { width: 0; opacity: 1; } 50% { width: 100%; opacity: 1; } 100% { width: 100%; height: 100%; opacity: 0; } }
         @keyframes fadeIn { to { opacity: 1; } }
-        @keyframes pulse-green {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(100, 255, 218, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0); }
-        }
-        @keyframes equalize { 0% { height: 4px; } 50% { height: 16px; } 100% { height: 4px; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* 移动端适配 */
         @media (max-width: 768px) {
-            .hero h1 { font-size: 3rem; }
             nav { padding: 1.5rem 2rem; }
-            .nav-links { display: none; }
-            .music-control { bottom: 20px; right: 20px; }
-            .music-hint { display: none; }
-            .modal-content { width: 95%; padding: 1.5rem; }
+            .hero h1 { font-size: 2.5rem; }
+            section { padding: 0 5%; }
         }
     </style>
 </head>
@@ -242,190 +141,123 @@
 
     <canvas id="canvas-bg"></canvas>
 
-    <!-- 音乐文件 -->
-    <audio id="bgm" loop>
-        <source src="https://cdn.pixabay.com/download/audio/2022/03/09/audio_822f9bc9a7.mp3?filename=space-atmosphere-21397.mp3" type="audio/mpeg">
-    </audio>
-
-    <!-- 音乐按钮 -->
-    <div class="music-control" id="music-btn">
-        <div class="sound-wave">
-            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-        </div>
-    </div>
-    <div class="music-hint">Sound On / Off</div>
-
-    <!-- 笔记 Modal (全屏弹窗) -->
-    <div id="note-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <div class="note-header">TO FUTURE SELF // </div>
-            <textarea id="note-area" placeholder="在这里写下那些无法言说的话，像发射到深空的信号..."></textarea>
-            <div class="modal-actions">
-                <span class="status-text" id="save-status">Saved locally</span>
-                <button class="btn-save" id="save-btn">TRANSMIT SIGNAL</button>
-            </div>
-        </div>
+    <!-- 转场遮罩 -->
+    <div id="warp-overlay">
+        <div class="warp-tunnel"></div>
+        <div class="loading-text">INITIALIZING...</div>
     </div>
 
-    <!-- 导航 -->
     <nav>
-        <div class="logo">未应之境</div>
-        <ul class="nav-links">
-            <li>独白 (Monologue)</li>
-            <li>足迹 (Traces)</li>
-            <li>回响 (Echoes)</li>
-        </ul>
+        <div class="logo">UNANSWERED_OS</div>
+        <div class="status-badge">ONLINE</div>
     </nav>
 
-    <!-- 1. 首页 -->
-    <section class="hero">
-        <h1>凡所未应<br>皆为佳境</h1>
-        <p>这里是思维的边缘，存放着那些未被解答的问题、未完成的代码和不想被打扰的时刻。</p>
-        <a href="#about" class="btn-explore">开始探索</a>
-    </section>
-
-    <!-- 2. 独白 -->
-    <section id="about">
-        <div class="section-title">ABOUT</div>
-        <div class="content-card observer-item">
-            <h2>关于构建者</h2><br>
-            <p>在这个信息过载的时代，我试图保留一片“未被定义”的区域。</p>
-            <div class="quote">"并不是所有的呼喊都需要回应，有时候，仅仅是把声音传递出去，就已经完成了它的使命。"</div>
-            <p>我是一名开发者/设计师/写作者。我在这里记录那些尚未成熟的想法，以及在数字荒原上的探索足迹。</p>
+    <section>
+        <div class="hero">
+            <h1>SYSTEM HUB</h1>
+            <p>> SELECT MEMORY FRAGMENT TO INITIATE SEQUENCE.<br>> 选择记忆碎片以启动序列。</p>
         </div>
-    </section>
 
-    <!-- 3. 足迹 (已更新) -->
-    <section id="works">
-        <div class="section-title">WORKS</div>
         <div class="grid">
-            <!-- 项目 1 -->
-            <div class="grid-item observer-item">
-                <div><span>PROJECT 01</span><h3>虚无笔记</h3></div>
-                <p>一个极简的思维导图工具，用于捕捉稍纵即逝的灵感。</p>
+            
+            <!-- Chapter 1 -->
+            <div class="chapter-card c1" onclick="enterLevel(1)">
+                <div>
+                    <div class="chapter-status">STORY MODE</div>
+                    <h2>CHAPTER 01</h2>
+                    <p>The First Echo // 第一声回响<br>关于孤独与信号的文字冒险。</p>
+                </div>
+                <div class="action-text">START SEQUENCE >></div>
             </div>
-            <!-- 项目 2 -->
-            <div class="grid-item observer-item">
-                <div><span>PROJECT 02</span><h3>失落的波段</h3></div>
-                <p>生成式音频可视化实验，将噪音转化为旋律。</p>
-            </div>
-            <!-- 项目 3 (可交互) -->
-            <div class="grid-item observer-item" style="border-color: rgba(100, 255, 218, 0.3);">
-                <div><span>WRITING</span><h3>给未来的信</h3></div>
-                <p>关于技术、哲学与未来生活方式的随笔集。</p>
-                <!-- 交互按钮 -->
-                <button class="card-action-btn" id="open-note-btn">WRITE ENTRY</button>
-            </div>
-        </div>
-    </section>
 
-    <!-- 4. 信号 -->
-    <section id="contact">
-        <div class="signal-container observer-item">
-            <div class="pulse"></div>
-            <h2>发射信号</h2>
-            <p style="color: var(--text-secondary); margin: 1rem 0 2rem;">如果你也在探索这片荒原，欢迎留下你的频率。</p>
-            <a href="mailto:your-email@example.com" class="btn-explore">SEND MESSAGE</a>
+            <!-- Chapter 2 -->
+            <div class="chapter-card c2" onclick="enterLevel(2)">
+                <div>
+                    <div class="chapter-status">PUZZLE</div>
+                    <h2>CHAPTER 02</h2>
+                    <p>Security Breach // 防火墙<br>需要进行手动频率校准以解开门禁。</p>
+                </div>
+                <div class="action-text">DECRYPT SYSTEM >></div>
+            </div>
+            
+             <!-- Chapter 3 -->
+             <div class="chapter-card c3" onclick="enterLevel(3)">
+                <div>
+                    <div class="chapter-status">EXPLORE</div>
+                    <h2>CHAPTER 03</h2>
+                    <p>Void Walker // 深渊行者<br>在黑暗中使用手电筒寻找失落的碎片。</p>
+                </div>
+                <div class="action-text">ENTER VOID >></div>
+            </div>
+
         </div>
     </section>
 
     <script>
-        // --- 1. 背景粒子 ---
+        // ============================================
+        // 1. 背景粒子特效 (Starfield)
+        // ============================================
         const canvas = document.getElementById('canvas-bg');
         const ctx = canvas.getContext('2d');
         let width, height, particles = [];
+
         function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
         window.addEventListener('resize', resize); resize();
+
         class Particle {
-            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5; this.size = Math.random() * 2; this.alpha = Math.random() * 0.5 + 0.1; }
-            update() { this.x += this.vx; this.y += this.vy; if (this.x < 0) this.x = width; if (this.x > width) this.x = 0; if (this.y < 0) this.y = height; if (this.y > height) this.y = 0; }
-            draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+            constructor() {
+                this.x = Math.random() * width; this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.3; this.vy = (Math.random() - 0.5) * 0.3;
+                this.size = Math.random() * 2; this.alpha = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < 0) this.x = width; if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            }
         }
-        for (let i = 0; i < 100; i++) particles.push(new Particle());
-        function animate() { ctx.clearRect(0, 0, width, height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animate); }
+
+        for (let i = 0; i < 80; i++) particles.push(new Particle());
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
         animate();
 
-        // --- 2. 滚动动效 ---
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); entry.target.style.opacity = 1; entry.target.style.transform = 'translateY(0)'; } });
-        }, { threshold: 0.1 });
-        document.querySelectorAll('.observer-item').forEach(item => { item.style.opacity = 0; item.style.transform = 'translateY(50px)'; item.style.transition = 'all 1s ease-out'; observer.observe(item); });
-        document.querySelector('.btn-explore').addEventListener('click', function(e) { e.preventDefault(); document.querySelector('#about').scrollIntoView({ behavior: 'smooth' }); });
-
-        // --- 3. 音乐播放逻辑 ---
-        const audio = document.getElementById('bgm');
-        const musicBtn = document.getElementById('music-btn');
-        audio.volume = 0.4; 
-        musicBtn.addEventListener('click', () => {
-            if (audio.paused) { audio.play(); musicBtn.classList.add('playing'); } else { audio.pause(); musicBtn.classList.remove('playing'); }
-        });
-
-        // --- 4. 笔记交互逻辑 (新增) ---
-        const modal = document.getElementById('note-modal');
-        const openBtn = document.getElementById('open-note-btn');
-        const closeBtn = document.querySelector('.close-btn');
-        const saveBtn = document.getElementById('save-btn');
-        const noteArea = document.getElementById('note-area');
-        const statusText = document.getElementById('save-status');
-
-        // 打开 Modal 并加载本地存储内容
-        openBtn.addEventListener('click', () => {
-            modal.style.display = 'flex';
-            // 强制回流以触发 transition
-            setTimeout(() => modal.classList.add('active'), 10);
+        // ============================================
+        // 2. 核心跳转逻辑 (Hyper Jump)
+        // ============================================
+        function enterLevel(level) {
+            const overlay = document.getElementById('warp-overlay');
+            const text = document.querySelector('.loading-text');
+            const tunnel = document.querySelector('.warp-tunnel');
             
-            // 从 LocalStorage 获取旧笔记
-            const savedNote = localStorage.getItem('unanswered_realm_note');
-            if (savedNote) {
-                noteArea.value = savedNote;
-            }
-        });
+            // 1. 显示遮罩
+            overlay.style.display = 'flex';
+            
+            // 2. 根据不同关卡设置不同的特效色和文字
+            let msg = "LOADING...";
+            let color = "#fff";
+            
+            if(level === 1) { msg = "DECRYPTING STORY FILE..."; color = "#64ffda"; }
+            if(level === 2) { msg = "BYPASSING FIREWALL..."; color = "#ff5f5f"; }
+            if(level === 3) { msg = "CONNECTING TO THE VOID..."; color = "#a78bfa"; }
 
-        // 关闭 Modal
-        function closeModal() {
-            modal.classList.remove('active');
-            setTimeout(() => modal.style.display = 'none', 500);
-            // 重置按钮状态
+            text.innerText = msg;
+            text.style.color = color;
+            tunnel.style.boxShadow = `0 0 20px #fff, 0 0 50px ${color}`;
+
+            // 3. 模拟加载进度
             setTimeout(() => {
-                saveBtn.innerHTML = "TRANSMIT SIGNAL";
-                saveBtn.style.background = "var(--glass-bg)";
-                saveBtn.style.color = "var(--accent-color)";
-                statusText.style.opacity = 0;
-            }, 500);
+                // 4. 跳转页面
+                window.location.href = `chapter${level}.html`; 
+            }, 2000);
         }
-
-        closeBtn.addEventListener('click', closeModal);
-        // 点击背景关闭
-        window.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-
-        // 保存/发送逻辑
-        saveBtn.addEventListener('click', () => {
-            const content = noteArea.value;
-            
-            // 模拟发送过程
-            saveBtn.innerHTML = "TRANSMITTING...";
-            saveBtn.style.cursor = "wait";
-            
-            setTimeout(() => {
-                // 保存到浏览器本地
-                localStorage.setItem('unanswered_realm_note', content);
-                
-                // 成功反馈
-                saveBtn.innerHTML = "SIGNAL SENT";
-                saveBtn.style.background = "var(--accent-color)";
-                saveBtn.style.color = "#000";
-                saveBtn.style.cursor = "default";
-                
-                statusText.style.opacity = 1; // 显示 "Saved locally"
-                
-                // 2秒后自动关闭
-                setTimeout(closeModal, 1500);
-            }, 800);
-        });
-
     </script>
 </body>
 </html>

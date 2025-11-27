@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 03 | Void Walker</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; cursor: none; /* 隐藏默认鼠标 */ }
+        
+        /* 背景图：这里用一张深空的图 */
+        #bg-image {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2072&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            z-index: 0;
+        }
+
+        /* 遮罩画布 */
+        #mask-canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+
+        /* 隐藏的物品 (Artifacts) */
+        .artifact {
+            position: absolute; width: 40px; height: 40px; border-radius: 50%;
+            border: 2px solid #a78bfa; background: rgba(167, 139, 250, 0.2);
+            z-index: 2; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            color: #fff; font-family: monospace; font-weight: bold; opacity: 0; transition: opacity 0.3s;
+            animation: pulse 2s infinite;
+        }
+        .artifact.revealed { opacity: 1; pointer-events: auto; cursor: pointer; }
+        
+        /* UI 层 */
+        #ui-layer {
+            position: absolute; top: 20px; left: 20px; z-index: 10;
+            color: #a78bfa; font-family: monospace; pointer-events: auto;
+        }
+        
+        /* 退出按钮 (当所有物品找到后出现) */
+        #exit-portal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            padding: 20px 40px; border: 1px solid #fff; color: #fff; background: rgba(0,0,0,0.8);
+            font-family: monospace; letter-spacing: 2px; cursor: pointer; z-index: 20;
+            display: none; box-shadow: 0 0 30px #a78bfa;
+        }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(167, 139, 250, 0); } 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); } }
+    </style>
+</head>
+<body>
+
+    <div id="bg-image"></div>
+    <canvas id="mask-canvas"></canvas>
+
+    <div id="ui-layer">
+        <div>MISSION: LOCATE MEMORY FRAGMENTS</div>
+        <div id="counter">FOUND: 0 / 3</div>
+    </div>
+
+    <!-- 隐藏物品的位置 (随机分布) -->
+    <div class="artifact" id="art-1" style="top: 20%; left: 30%;">?</div>
+    <div class="artifact" id="art-2" style="top: 70%; left: 60%;">?</div>
+    <div class="artifact" id="art-3" style="top: 40%; left: 80%;">?</div>
+
+    <div id="exit-portal" onclick="window.location.href='index.html'">>> JUMP TO HUB <<</div>
+
+    <script>
+        const canvas = document.getElementById('mask-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let mouseX = -100, mouseY = -100;
+
+        // 物品逻辑
+        let foundCount = 0;
+        const totalArtifacts = 3;
+        const artifacts = document.querySelectorAll('.artifact');
+        const counterDisplay = document.getElementById('counter');
+        const exitBtn = document.getElementById('exit-portal');
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            drawMask();
+        }
+
+        // 核心：绘制黑暗遮罩和“洞”
+        function drawMask() {
+            // 1. 填充全黑
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.96)'; // 极黑
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. 擦除鼠标周围 (手电筒)
+            ctx.globalCompositeOperation = 'destination-out';
+            const gradient = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
+            gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 150, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('mousemove', e => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            requestAnimationFrame(drawMask);
+            checkVisibility();
+        });
+
+        // 检查物品是否被照亮
+        function checkVisibility() {
+            artifacts.forEach(art => {
+                const rect = art.getBoundingClientRect();
+                const artX = rect.left + rect.width / 2;
+                const artY = rect.top + rect.height / 2;
+                
+                // 计算距离
+                const dist = Math.sqrt((mouseX - artX) ** 2 + (mouseY - artY) ** 2);
+                
+                // 如果在手电筒范围内 (100px)，显示
+                if (dist < 100 && !art.classList.contains('collected')) {
+                    art.classList.add('revealed');
+                } else {
+                    art.classList.remove('revealed');
+                }
+            });
+        }
+
+        // 点击物品
+        artifacts.forEach(art => {
+            art.addEventListener('click', function() {
+                if (!this.classList.contains('revealed')) return; // 没照亮不能点
+                
+                this.classList.add('collected');
+                this.style.display = 'none'; // 消失
+                foundCount++;
+                counterDisplay.innerText = `FOUND: ${foundCount} / ${totalArtifacts}`;
+                
+                // 播放一个音效或显示文字提示 (这里简化处理)
+                alert(`Fragment data recovered: [${Math.random().toString(16).substr(2, 6)}]`);
+
+                if (foundCount >= totalArtifacts) {
+                    exitBtn.style.display = 'block';
+                    document.body.style.cursor = 'default';
+                }
+            });
+        });
+
+        // 初始化
+        resize();
+    </script>
+</body>
+</html>

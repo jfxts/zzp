@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 02 | Decryption</title>
+    <style>
+        :root { --bg-color: #0a0505; --error-red: #ff4444; --success-green: #00ff88; --font-mono: 'Courier New', monospace; }
+        body { background-color: var(--bg-color); color: var(--error-red); font-family: var(--font-mono); height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; user-select: none; }
+        
+        /* 噪音背景 */
+        .noise-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.1; z-index: -1; pointer-events: none; background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48ZmlsdGVyIGlkPSJnoiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjY1IiBudW1PY3RhdmVzPSIzIiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI2cpIiBvcGFjaXR5PSIwLjUiLz48L3N2Zz4='); }
+
+        .container { border: 1px solid #333; padding: 3rem; background: rgba(20,0,0,0.8); box-shadow: 0 0 50px rgba(255,0,0,0.1); width: 400px; text-align: center; position: relative; }
+        
+        h2 { margin-bottom: 2rem; letter-spacing: 2px; text-shadow: 0 0 10px var(--error-red); animation: glitch 2s infinite; }
+        .screen { background: #000; border: 1px solid #333; height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 2rem; color: var(--error-red); font-size: 1.2rem; }
+        
+        /* 滑块组 */
+        .slider-group { margin-bottom: 1.5rem; text-align: left; }
+        label { font-size: 0.8rem; opacity: 0.7; display: flex; justify-content: space-between; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin-top: 10px; cursor: pointer; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #333; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 10px; background: var(--error-red); margin-top: -8px; border: 1px solid #000; transition: 0.2s; }
+        
+        /* 状态指示灯 */
+        .status-light { width: 10px; height: 10px; border-radius: 50%; background: #333; display: inline-block; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: 0.3s; }
+        .status-light.active { background: var(--success-green); box-shadow: 0 0 15px var(--success-green); }
+
+        /* 解锁按钮 */
+        #unlock-btn { margin-top: 2rem; background: transparent; border: 1px solid var(--error-red); color: var(--error-red); padding: 10px 30px; font-family: inherit; cursor: pointer; transition: 0.3s; opacity: 0.5; pointer-events: none; }
+        #unlock-btn.ready { opacity: 1; pointer-events: auto; border-color: var(--success-green); color: var(--success-green); }
+        #unlock-btn.ready:hover { background: var(--success-green); color: #000; }
+
+        @keyframes glitch { 0% { transform: translate(0); } 20% { transform: translate(-2px, 2px); } 40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); } 80% { transform: translate(2px, -2px); } 100% { transform: translate(0); } }
+        
+        .hint-text { margin-top: 20px; font-size: 10px; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    
+    <div class="container">
+        <h2>SECURITY LOCK</h2>
+        <div class="screen" id="display-screen">ACCESS DENIED</div>
+        
+        <div class="slider-group">
+            <label>FREQUENCY A <span class="status-light" id="light-1"></span></label>
+            <input type="range" min="0" max="100" value="10" id="range-1">
+        </div>
+        <div class="slider-group">
+            <label>FREQUENCY B <span class="status-light" id="light-2"></span></label>
+            <input type="range" min="0" max="100" value="90" id="range-2">
+        </div>
+        <div class="slider-group">
+            <label>PHASE C <span class="status-light" id="light-3"></span></label>
+            <input type="range" min="0" max="100" value="50" id="range-3">
+        </div>
+
+        <button id="unlock-btn" onclick="finishLevel()">INITIALIZE SEQUENCE</button>
+        <div class="hint-text">ALIGN ALL SIGNALS TO GREEN ZONE</div>
+    </div>
+
+    <script>
+        // 随机生成解谜答案 (每次刷新都不一样)
+        const target1 = Math.floor(Math.random() * 60) + 20;
+        const target2 = Math.floor(Math.random() * 60) + 20;
+        const target3 = Math.floor(Math.random() * 60) + 20;
+        const tolerance = 5; // 容错率
+
+        const inputs = [document.getElementById('range-1'), document.getElementById('range-2'), document.getElementById('range-3')];
+        const lights = [document.getElementById('light-1'), document.getElementById('light-2'), document.getElementById('light-3')];
+        const targets = [target1, target2, target3];
+        const screen = document.getElementById('display-screen');
+        const btn = document.getElementById('unlock-btn');
+
+        function checkStatus() {
+            let solvedCount = 0;
+            inputs.forEach((input, index) => {
+                const val = parseInt(input.value);
+                const diff = Math.abs(val - targets[index]);
+                const thumb = input;
+                
+                // 视觉反馈：越接近震动越小，或者颜色变化
+                if (diff <= tolerance) {
+                    lights[index].classList.add('active');
+                    solvedCount++;
+                    // 修改滑块颜色
+                    input.style.setProperty('--error-red', '#00ff88'); 
+                } else {
+                    lights[index].classList.remove('active');
+                    input.style.setProperty('--error-red', '#ff4444');
+                }
+            });
+
+            if (solvedCount === 3) {
+                screen.innerText = "SYSTEM BYPASSED";
+                screen.style.color = "var(--success-green)";
+                screen.style.borderColor = "var(--success-green)";
+                btn.classList.add('ready');
+            } else {
+                screen.innerText = "ACCESS DENIED";
+                screen.style.color = "var(--error-red)";
+                btn.classList.remove('ready');
+            }
+        }
+
+        inputs.forEach(input => input.addEventListener('input', checkStatus));
+
+        function finishLevel() {
+            btn.innerText = "LOADING...";
+            setTimeout(() => {
+                alert("防火墙已攻破。权限已获取。");
+                window.location.href = 'index.html';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

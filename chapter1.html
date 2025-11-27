@@ -1,0 +1,180 @@
+<!-- 保存为 chapter1.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 01 | The First Echo</title>
+    <style>
+        :root { --bg-color: #000; --terminal-green: #64ffda; --alert-red: #ff5f5f; --font-mono: 'Courier New', monospace; }
+        body { background-color: var(--bg-color); color: var(--terminal-green); font-family: var(--font-mono); height: 100vh; display: flex; flex-direction: column; padding: 2rem; overflow: hidden; }
+        
+        /* 界面布局 */
+        #game-container {
+            flex-grow: 1; border: 1px solid rgba(100, 255, 218, 0.3); padding: 2rem;
+            overflow-y: auto; display: flex; flex-direction: column; justify-content: flex-end;
+            background: radial-gradient(circle at center, rgba(0,20,10,0.5) 0%, #000 100%);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        /* 扫描线特效 */
+        #game-container::before {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none;
+        }
+
+        /* 文字样式 */
+        p { margin-bottom: 1rem; line-height: 1.6; opacity: 0; animation: fadeIn 0.5s forwards; max-width: 800px; }
+        .system-msg { color: #888; font-style: italic; font-size: 0.8rem; margin-bottom: 2rem; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .choice-container { display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; z-index: 10; }
+        
+        /* 按钮样式 */
+        button {
+            background: transparent; border: 1px solid var(--terminal-green); color: var(--terminal-green);
+            padding: 1rem 2rem; font-family: inherit; font-size: 1rem; cursor: pointer;
+            transition: 0.3s; opacity: 0; animation: fadeUp 1s forwards 0.5s;
+        }
+        button:hover { background: var(--terminal-green); color: #000; box-shadow: 0 0 15px var(--terminal-green); }
+        
+        /* 回主页按钮 */
+        #exit-btn {
+            position: absolute; top: 20px; right: 20px; border: none; color: #555; cursor: pointer; z-index: 20;
+        }
+        #exit-btn:hover { color: #fff; }
+
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes alertPulse { 0% { box-shadow: inset 0 0 50px rgba(0,0,0,0.8); } 50% { box-shadow: inset 0 0 80px rgba(255, 95, 95, 0.3); } 100% { box-shadow: inset 0 0 50px rgba(0,0,0,0.8); } }
+    </style>
+</head>
+<body>
+
+    <button id="exit-btn" onclick="window.location.href='index.html'">[ ESCAPE TO HUB ]</button>
+
+    <div id="game-container">
+        <div class="system-msg">CONNECTION ESTABLISHED // SECTOR 7 // MEMORY LOG: 001</div>
+        <div id="log-content">
+            <!-- 剧情文本将通过 JS 插入这里 -->
+        </div>
+        <div class="choice-container" id="choices">
+            <!-- 选项将通过 JS 插入这里 -->
+        </div>
+    </div>
+
+    <script>
+        const contentDiv = document.getElementById('log-content');
+        const choiceDiv = document.getElementById('choices');
+        const container = document.getElementById('game-container');
+
+        // 剧情数据
+        const story = {
+            start: {
+                text: "你在一片漆黑的数字虚空中醒来。周围没有光，只有远处传来的一段有规律的低频脉冲信号... \n\n嘀... 嘀... 嘀...",
+                choices: [
+                    { text: "靠近信号源", next: "approach" },
+                    { text: "原地不动，分析环境", next: "analyze" }
+                ]
+            },
+            approach: {
+                text: "你向信号源移动。随着距离拉近，你的视觉模块开始解析周围的数据流。那不是普通的信号，那是一段被加密的求救信息。\n\n[警告]：检测到防火墙拦截。",
+                choices: [
+                    { text: "暴力破解防火墙", next: "hack_fail" },
+                    { text: "尝试频率同步", next: "sync_success" }
+                ]
+            },
+            analyze: {
+                text: "你开启了被动扫描。这里是旧时代的服务器废墟。空气中弥漫着死代码的味道。你发现脚下有一根发光的数据线延伸向远方。",
+                choices: [
+                    { text: "跟随数据线", next: "sync_success" },
+                    { text: "切断数据线", next: "game_over" }
+                ]
+            },
+            hack_fail: {
+                text: "警报！你的入侵行为触发了主动防御系统。红色的激光网瞬间将你包围。\n\n连接中断。",
+                bgEffect: "alert",
+                choices: [
+                    { text: "重启系统 (RESTART)", next: "start" }
+                ]
+            },
+            sync_success: {
+                text: "频率同步成功。迷雾散去，你看到了一台古老的终端机。屏幕上闪烁着一行字：\n\n'终于... 有人听到我了。我把钥匙留在了[足迹]里。'\n\n(线索已获得：主页的Works区域可能有隐藏信息)",
+                choices: [
+                    { text: "记录信息并退出", next: "finish" }
+                ]
+            },
+            game_over: {
+                text: "你切断了唯一的连接。虚空吞噬了一切。\n\nBAD ENDING.",
+                choices: [
+                    { text: "重试", next: "start" }
+                ]
+            },
+            finish: {
+                text: "数据传输完毕。正在断开神经连接...",
+                choices: [
+                    { text: "回到主基地", action: "exit" }
+                ]
+            }
+        };
+
+        // 打字机效果函数
+        function typeWriter(text, callback) {
+            const p = document.createElement('p');
+            contentDiv.appendChild(p);
+            let i = 0;
+            container.scrollTop = container.scrollHeight; // 自动滚动到底部
+
+            function type() {
+                if (i < text.length) {
+                    p.innerHTML += text.charAt(i) === '\n' ? '<br>' : text.charAt(i);
+                    i++;
+                    setTimeout(type, 30); // 打字速度
+                } else {
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        // 渲染剧情
+        function renderScene(sceneId) {
+            // 清空选项
+            choiceDiv.innerHTML = '';
+            
+            const scene = story[sceneId];
+            
+            // 处理背景特效
+            if (scene.bgEffect === 'alert') {
+                container.style.animation = "alertPulse 1s infinite";
+                container.style.borderColor = "var(--alert-red)";
+            } else {
+                container.style.animation = "none";
+                container.style.borderColor = "rgba(100, 255, 218, 0.3)";
+            }
+
+            // 开始打字
+            typeWriter(scene.text, () => {
+                // 打字结束后显示选项
+                scene.choices.forEach(choice => {
+                    const btn = document.createElement('button');
+                    btn.innerText = choice.text;
+                    btn.onclick = () => {
+                        if (choice.action === 'exit') {
+                            window.location.href = 'index.html';
+                        } else {
+                            renderScene(choice.next);
+                        }
+                    };
+                    choiceDiv.appendChild(btn);
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        // 启动游戏
+        setTimeout(() => renderScene('start'), 500);
+
+    </script>
+</body>
+</html>
