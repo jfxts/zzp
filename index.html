@@ -3,573 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>未应之境 | The Unanswered Realm</title>
+    <title>我的自定义 Galgame (三表情版)</title>
     <style>
-        /* ----- 全局设置 ----- */
-        :root {
-            --bg-color: #05070a;
-            --text-primary: #e0e6ed;
-            --text-secondary: #94a3b8;
-            --accent-color: #64ffda;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.05);
-            --modal-bg: rgba(5, 7, 10, 0.85);
-            --font-mono: 'Courier New', Courier, monospace;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; user-select: none; }
+        /* --- 样式部分 (保持高颜值) --- */
+        body { margin: 0; background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; user-select: none; }
+        #game-container { width: 900px; height: 640px; position: relative; background: #000; box-shadow: 0 0 40px rgba(100, 200, 255, 0.4); overflow: hidden; border-radius: 12px; border: 4px solid #fff; }
         
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            font-family: 'PingFang SC', 'Helvetica Neue', sans-serif;
-            line-height: 1.8;
-            overflow-x: hidden;
-            cursor: default; /* 稍后我们会用 JS 自定义光标逻辑 */
-        }
-
-        a { text-decoration: none; color: inherit; transition: 0.3s; }
-        ul { list-style: none; }
-        button { font-family: inherit; }
-
-        /* ----- 背景动画画布 ----- */
-        #canvas-bg {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; opacity: 0.6; pointer-events: none;
+        /* 背景 */
+        #background { 
+            width: 100%; height: 100%; position: absolute; z-index: 1; 
+            background-size: cover; background-position: center;
+            transition: opacity 0.5s; 
         }
         
-        /* 底部提示 */
-        .system-hints {
-            position: fixed; bottom: 30px; left: 30px; font-size: 10px;
-            color: var(--text-secondary); opacity: 0.4; letter-spacing: 1px;
-            font-family: var(--font-mono); pointer-events: none;
-            display: flex; flex-direction: column; gap: 5px;
+        /* 角色立绘 */
+        #character { 
+            position: absolute; 
+            bottom: -20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            height: 90%; /* 如果图片太大，把这里改成 80% 或 70% */
+            transition: all 0.2s ease; /* 稍微调快点，表情切换更干脆 */
+            z-index: 10; 
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
         }
 
-        /* ----- 导航栏 (磁力效果) ----- */
-        nav {
-            position: fixed; top: 0; width: 100%; padding: 2rem 4rem;
-            display: flex; justify-content: space-between; align-items: center;
-            z-index: 100; backdrop-filter: blur(5px);
-        }
-        .logo { font-size: 1.5rem; font-weight: 300; letter-spacing: 4px; opacity: 0.8; }
-        
-        .nav-links li { 
-            display: inline-block; margin-left: 3rem; font-size: 0.9rem; 
-            color: var(--text-secondary); cursor: pointer; 
-            transition: color 0.3s; /* 移除 transform transition 以便 JS 控制物理效果 */
-        }
-        .nav-links li:hover { color: var(--accent-color); }
-
-        /* ----- 通用布局 ----- */
-        section {
-            min-height: 100vh; display: flex; flex-direction: column;
-            justify-content: center; padding: 0 10%; position: relative;
-        }
-
-        /* ----- 1. 首页 (Hero) ----- */
-        .hero h1 {
-            font-size: 5rem; font-weight: 200; line-height: 1.1; margin-bottom: 2rem;
-            background: linear-gradient(to right, #fff, #666);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            opacity: 0; transform: translateY(30px);
-            animation: fadeUp 1.5s ease forwards 0.5s;
-        }
-        .hero p {
-            font-size: 1.2rem; color: var(--text-secondary); max-width: 600px;
-            margin-bottom: 3rem; opacity: 0; transform: translateY(30px);
-            animation: fadeUp 1.5s ease forwards 0.8s;
-        }
-        .btn-explore {
-            display: inline-block; padding: 1rem 2.5rem;
-            border: 1px solid var(--glass-border); background: var(--glass-bg);
-            color: var(--text-primary); letter-spacing: 2px; font-size: 0.9rem;
-            transition: 0.4s; opacity: 0; animation: fadeIn 2s ease forwards 1.2s;
-            cursor: pointer;
-        }
-        .btn-explore:hover { border-color: var(--accent-color); box-shadow: 0 0 20px rgba(100, 255, 218, 0.1); }
-
-        /* ----- 2. 独白 (About) ----- */
-        .section-title {
-            font-size: 4rem; opacity: 0.05; position: absolute;
-            top: 10%; left: 5%; font-weight: 900; z-index: -1;
-            font-family: var(--font-mono); cursor: default;
-        }
-
-        .content-card {
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-            padding: 3rem; max-width: 800px; backdrop-filter: blur(10px);
-            transform: translateY(50px); opacity: 0; transition: 1s ease;
-        }
-        .content-card.visible { transform: translateY(0); opacity: 1; }
-        .quote {
-            font-style: italic; border-left: 2px solid var(--accent-color);
-            padding-left: 1.5rem; margin: 1.5rem 0; color: var(--text-secondary);
-        }
-
-        /* ----- 3. 足迹 (Works) ----- */
-        .grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem; margin-top: 2rem;
-        }
-        .grid-item {
-            background: rgba(255,255,255,0.02); border: 1px solid transparent;
-            padding: 2rem; height: 350px; display: flex; flex-direction: column;
-            justify-content: space-between; transition: 0.4s; position: relative; overflow: hidden; z-index: 1;
-        }
-        .grid-item:hover {
-            border-color: var(--text-secondary); transform: translateY(-5px);
-            background: rgba(255,255,255,0.04); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .card-content { z-index: 2; pointer-events: none; }
-        .card-content h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-        .card-content span { font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1px; display: block; margin-bottom: 0.5rem; }
-        .card-content p { font-size: 0.9rem; color: var(--text-secondary); }
-        .interaction-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1; opacity: 0.5; transition: opacity 0.5s;
-        }
-        .grid-item:hover .interaction-layer { opacity: 1; }
-        
-        #nihility-input {
-            width: 100%; background: transparent; border: none; 
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            color: var(--accent-color); font-family: inherit; padding: 5px 0;
-            margin-top: 15px; font-size: 0.9rem; pointer-events: auto;
-        }
-        .floating-thought {
-            position: absolute; color: rgba(255,255,255,0.3);
-            font-size: 0.8rem; pointer-events: none;
-            animation: floatUp 8s linear forwards; white-space: nowrap;
-        }
-        #wave-canvas { width: 100%; height: 100%; }
-        .card-action-btn {
-            background: transparent; border: 1px solid var(--accent-color);
-            color: var(--accent-color); padding: 0.5rem 1rem;
-            margin-top: 1rem; cursor: pointer; opacity: 0.7; transition: 0.3s;
-            width: fit-content; font-size: 0.8rem; letter-spacing: 1px; pointer-events: auto;
-        }
-        .card-action-btn:hover { opacity: 1; background: rgba(100, 255, 218, 0.1); }
-
-
-        /* ----- 4. 信号 (Contact - Frequency Tuner) ----- */
-        .signal-container { text-align: center; width: 100%; max-width: 500px; margin: 0 auto; }
-        .tuner-wrapper {
-            margin-top: 2rem; padding: 2rem; background: var(--glass-bg);
-            border: 1px solid var(--glass-border); border-radius: 10px; position: relative;
-        }
-        .secret-message {
-            font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-color);
-            filter: blur(10px); opacity: 0.2; transition: all 0.2s; margin-bottom: 1.5rem; user-select: text;
-        }
-        .secret-message.decoded { filter: blur(0); opacity: 1; text-shadow: 0 0 10px var(--accent-color); }
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: var(--text-secondary); border-radius: 2px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 10px; background: var(--text-primary); margin-top: -9px; border-radius: 2px; box-shadow: 0 0 10px rgba(255,255,255,0.5); transition: 0.2s; }
-        input[type=range].tuned::-webkit-slider-thumb { background: var(--accent-color); box-shadow: 0 0 15px var(--accent-color); height: 25px; }
-        .tuner-hint { margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); display: flex; justify-content: space-between; }
-
-
-        /* ----- 交互 1: 声纳波纹 (Sonar) ----- */
-        .sonar-wave {
-            position: fixed; border-radius: 50%;
-            border: 1px solid var(--accent-color);
-            background: rgba(100, 255, 218, 0.1);
-            pointer-events: none; z-index: 9999;
-            transform: translate(-50%, -50%);
-            animation: sonarAnim 0.8s ease-out forwards;
-        }
-
-        /* ----- 交互 2: 终端控制台 (Terminal) ----- */
-        #terminal-overlay {
-            position: fixed; top: -100%; left: 0; width: 100%; height: 50vh;
-            background: rgba(5, 7, 10, 0.95);
-            border-bottom: 1px solid var(--accent-color);
-            z-index: 3000; transition: top 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-            padding: 40px; font-family: var(--font-mono); color: var(--accent-color);
-            overflow-y: auto; display: flex; flex-direction: column;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.8);
-        }
-        #terminal-overlay.open { top: 0; }
-        .term-line { margin-bottom: 5px; opacity: 0.8; }
-        .term-input-line { display: flex; margin-top: 10px; }
-        .term-prompt { margin-right: 10px; color: #fff; }
-        #term-input {
-            background: transparent; border: none; color: var(--accent-color);
-            font-family: var(--font-mono); font-size: 1rem; flex-grow: 1; caret-color: var(--accent-color);
+        /* 对话框 */
+        #dialogue-box { 
+            position: absolute; bottom: 20px; left: 20px; right: 20px; height: 180px; 
+            background: rgba(30, 30, 40, 0.9); 
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px; padding: 25px 35px; color: #fff; z-index: 20; 
+            cursor: pointer; backdrop-filter: blur(5px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
         }
         
-        /* ----- 音乐 & Modal (通用) ----- */
-        .music-control {
-            position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px;
-            background: var(--glass-bg); border: 1px solid var(--glass-border);
-            border-radius: 50%; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; z-index: 999; backdrop-filter: blur(5px); transition: all 0.3s;
+        #name-tag { 
+            font-size: 28px; font-weight: bold; color: #ff9a9e; 
+            margin-bottom: 12px; display: inline-block; 
         }
-        .music-control:hover { border-color: var(--accent-color); box-shadow: 0 0 15px rgba(100, 255, 218, 0.2); }
-        .sound-wave { display: flex; align-items: flex-end; height: 20px; gap: 3px; }
-        .bar { width: 3px; background: var(--text-primary); border-radius: 2px; height: 4px; }
-        .music-control.playing .bar { background: var(--accent-color); animation: equalize 1s infinite ease-in-out; }
-        .music-control.playing .bar:nth-child(1) { animation-delay: 0.1s; }
-        .music-control.playing .bar:nth-child(2) { animation-delay: 0.3s; }
-        .music-control.playing .bar:nth-child(3) { animation-delay: 0.5s; }
-        .music-control.playing .bar:nth-child(4) { animation-delay: 0.2s; }
-        .music-hint { position: fixed; bottom: 38px; right: 90px; font-size: 12px; color: var(--text-secondary); opacity: 0; transition: 0.5s; pointer-events: none; }
-        .music-control:hover + .music-hint { opacity: 1; }
-
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--modal-bg); z-index: 2000;
-            backdrop-filter: blur(15px); justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.5s;
+        
+        #text-content { font-size: 22px; line-height: 1.5; color: #f0f0f0; }
+        
+        /* 选项按钮 */
+        #choices-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.6); display: none; 
+            flex-direction: column; justify-content: center; align-items: center; 
+            z-index: 30; backdrop-filter: blur(4px);
         }
-        .modal.active { display: flex; opacity: 1; }
-        .modal-content {
-            width: 80%; max-width: 600px; background: rgba(10, 12, 16, 0.6);
-            border: 1px solid var(--glass-border); padding: 3rem; position: relative;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform: scale(0.95); transition: transform 0.3s;
+        
+        .choice-btn { 
+            background: white; border: none; color: #333; 
+            padding: 15px 60px; margin: 15px; font-size: 22px; border-radius: 50px; 
+            cursor: pointer; width: 500px; font-weight: bold; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.1s;
+            border-left: 10px solid #ff9a9e;
         }
-        .modal.active .modal-content { transform: scale(1); }
-        .close-btn { position: absolute; top: 1rem; right: 1.5rem; font-size: 2rem; color: var(--text-secondary); cursor: pointer; transition: 0.3s; }
-        .close-btn:hover { color: #fff; }
-        .note-header { font-size: 1.2rem; color: var(--accent-color); margin-bottom: 1.5rem; letter-spacing: 2px; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; }
-        #note-area { width: 100%; height: 300px; background: transparent; border: none; color: var(--text-primary); font-size: 1.1rem; font-family: inherit; resize: none; line-height: 1.6; }
-        #note-area::placeholder { color: rgba(148, 163, 184, 0.3); font-style: italic; }
-        .modal-actions { margin-top: 2rem; display: flex; justify-content: flex-end; align-items: center; }
-        .status-text { margin-right: 1.5rem; font-size: 0.8rem; color: var(--text-secondary); opacity: 0; transition: 0.3s; }
-        .btn-save { padding: 0.8rem 2rem; background: var(--glass-bg); border: 1px solid var(--accent-color); color: var(--accent-color); cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
-        .btn-save:hover { background: var(--accent-color); color: #000; box-shadow: 0 0 15px var(--accent-color); }
-
-        /* ----- Keyframes ----- */
-        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { to { opacity: 1; } }
-        @keyframes equalize { 0% { height: 4px; } 50% { height: 16px; } 100% { height: 4px; } }
-        @keyframes floatUp { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 0.8; } 100% { transform: translateY(-150px) rotate(10deg); opacity: 0; } }
-        @keyframes sonarAnim { 
-            0% { width: 0; height: 0; opacity: 0.8; } 
-            100% { width: 100px; height: 100px; opacity: 0; } 
-        }
-
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 3rem; }
-            nav { padding: 1.5rem 2rem; }
-            .nav-links { display: none; }
-            .system-hints { display: none; }
-            .modal-content { width: 95%; padding: 1.5rem; }
-            #terminal-overlay { height: 40vh; padding: 20px; }
-        }
+        .choice-btn:hover { transform: scale(1.05); background: #fff0f5; }
+        
+        /* 光标动画 */
+        .cursor::after { content: ' ▼'; animation: blink 1s infinite; color: #ff9a9e; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
-    <canvas id="canvas-bg"></canvas>
-    
-    <!-- 系统交互提示 -->
-    <div class="system-hints">
-        <div>[SPACE] : GRAVITY WELL</div>
-        <div>[~] : TERMINAL CONSOLE</div>
+    <div id="game-container">
+        <div id="background"></div>
+        <img id="character" src="" style="opacity: 0">
+        
+        <div id="dialogue-box" onclick="nextStep()">
+            <div id="name-tag"></div>
+            <div id="text-content">点击开始游戏...</div>
+        </div>
+        <div id="choices-overlay"></div>
     </div>
-
-    <!-- 终端 Overlay -->
-    <div id="terminal-overlay">
-        <div class="term-line">Unanswered OS [Version 1.0.4]</div>
-        <div class="term-line">Copyright (c) 2024 Void Systems. All rights reserved.</div>
-        <div class="term-line"><br>Type 'help' to see available commands.<br></div>
-        <div id="term-output"></div>
-        <div class="term-input-line">
-            <span class="term-prompt">visitor@void:~$</span>
-            <input type="text" id="term-input" autocomplete="off" spellcheck="false">
-        </div>
-    </div>
-
-    <!-- 音乐 -->
-    <audio id="bgm" loop>
-        <source src="https://cdn.pixabay.com/download/audio/2022/03/09/audio_822f9bc9a7.mp3?filename=space-atmosphere-21397.mp3" type="audio/mpeg">
-    </audio>
-    <div class="music-control" id="music-btn"><div class="sound-wave"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div>
-    <div class="music-hint">Sound On / Off</div>
-
-    <!-- Modal -->
-    <div id="note-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <div class="note-header">TO FUTURE SELF // </div>
-            <textarea id="note-area" placeholder="在这里写下那些无法言说的话，像发射到深空的信号..."></textarea>
-            <div class="modal-actions">
-                <span class="status-text" id="save-status">Saved locally</span>
-                <button class="btn-save" id="save-btn">TRANSMIT SIGNAL</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Nav -->
-    <nav>
-        <div class="logo">未应之境</div>
-        <ul class="nav-links">
-            <li class="mag-link" onclick="document.getElementById('about').scrollIntoView({behavior: 'smooth'})">独白</li>
-            <li class="mag-link" onclick="document.getElementById('works').scrollIntoView({behavior: 'smooth'})">足迹</li>
-            <li class="mag-link" onclick="document.getElementById('contact').scrollIntoView({behavior: 'smooth'})">回响</li>
-        </ul>
-    </nav>
-
-    <!-- Hero -->
-    <section class="hero">
-        <h1>凡所未应<br>皆为佳境</h1>
-        <p>这里是思维的边缘，存放着那些未被解答的问题、未完成的代码和不想被打扰的时刻。</p>
-        <a href="#about" class="btn-explore">开始探索</a>
-    </section>
-
-    <!-- About -->
-    <section id="about">
-        <div class="section-title" data-value="ABOUT">ABOUT</div>
-        <div class="content-card observer-item">
-            <h2>关于构建者</h2><br>
-            <p>在这个信息过载的时代，我试图保留一片“未被定义”的区域。</p>
-            <div class="quote">"并不是所有的呼喊都需要回应，有时候，仅仅是把声音传递出去，就已经完成了它的使命。"</div>
-            <p>我是一名开发者/设计师/写作者。我在这里记录那些尚未成熟的想法，以及在数字荒原上的探索足迹。</p>
-        </div>
-    </section>
-
-    <!-- Works -->
-    <section id="works">
-        <div class="section-title" data-value="WORKS">WORKS</div>
-        <div class="grid">
-            <div class="grid-item observer-item" id="nihility-card">
-                <div class="interaction-layer" id="thoughts-container"></div>
-                <div class="card-content">
-                    <div><span>PROJECT 01</span><h3>虚无笔记</h3></div>
-                    <p>思维捕捉器。在下方输入你的灵感，看它们如何漂入虚空。</p>
-                </div>
-                <div style="z-index: 2; margin-top: auto;">
-                    <input type="text" id="nihility-input" placeholder="输入灵感并回车..." autocomplete="off">
-                </div>
-            </div>
-            <div class="grid-item observer-item" id="wave-card">
-                <div class="interaction-layer"><canvas id="wave-canvas"></canvas></div>
-                <div class="card-content" style="pointer-events: none;">
-                    <div><span>PROJECT 02</span><h3>失落的波段</h3></div>
-                    <p>音频可视化实验。移动鼠标干扰波形，寻找失落的频率。</p>
-                </div>
-            </div>
-            <div class="grid-item observer-item" style="border-color: rgba(100, 255, 218, 0.3);">
-                <div class="card-content">
-                    <div><span>WRITING</span><h3>给未来的信</h3></div>
-                    <p>关于技术、哲学与未来生活方式的随笔集。</p>
-                </div>
-                <button class="card-action-btn" id="open-note-btn">WRITE ENTRY</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- Contact -->
-    <section id="contact">
-        <div class="section-title" data-value="CONTACT">CONTACT</div>
-        <div class="signal-container observer-item">
-            <h2>发射信号</h2>
-            <p style="color: var(--text-secondary); margin: 0 0 2rem;">寻找正确的频率以建立连接。</p>
-            <div class="tuner-wrapper">
-                <div class="secret-message" id="secret-email">hello@unanswered.realm</div>
-                <input type="range" min="0" max="100" value="0" id="freq-slider">
-                <div class="tuner-hint"><span>LOW FREQ</span><span id="signal-status">NO SIGNAL</span><span>HIGH FREQ</span></div>
-            </div>
-        </div>
-    </section>
 
     <script>
-        // ============================================
-        // 1. 核心动画与粒子 (Gravity Well)
-        // ============================================
-        const canvas = document.getElementById('canvas-bg');
-        const ctx = canvas.getContext('2d');
-        let width, height, particles = [];
-        let isSpacePressed = false;
-        let mouseX = 0, mouseY = 0;
+        /* 
+           --- 1. 资源配置 --- 
+           这里增加了 normal (普通表情)
+        */
+        const assets = {
+            bg:     "bg.jpg",      // 背景
+            normal: "normal.png",  // 普通表情 (新增)
+            happy:  "happy.png",   // 开心表情
+            sad:    "sad.png"      // 难过表情
+        };
 
-        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
-        window.addEventListener('resize', resize); resize();
-        window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
-        window.addEventListener('keydown', e => { if(e.code === 'Space') isSpacePressed = true; });
-        window.addEventListener('keyup', e => { if(e.code === 'Space') isSpacePressed = false; });
-
-        class Particle {
-            constructor() { 
-                this.x = Math.random() * width; this.y = Math.random() * height; 
-                this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5; 
-                this.size = Math.random() * 2; this.alpha = Math.random() * 0.5 + 0.1;
+        /* --- 2. 游戏剧本 --- */
+        const script = {
+            "start": {
+                name: "",
+                text: "（这是放学后的社团，夕阳西下……）",
+                bg: assets.bg,
+                char: null,
+                next: "meet"
+            },
+            "meet": {
+                name: "???",
+                text: "哎呀，前辈！",
+                bg: assets.bg,
+                char: assets.normal, // 【普通】刚见面，情绪正常
+                next: "intro"
+            },
+            "intro": {
+                name: "学妹",
+                text: "能在这里遇到你真是太巧了。",
+                char: assets.normal, // 【普通】继续保持
+                next: "question"
+            },
+            "question": {
+                name: "学妹",
+                text: "那个……这周末有新电影上映，前辈有空吗？",
+                char: assets.normal, // 【普通】等待回复，稍微有点紧张
+                choices: [
+                    { text: "有空啊，一起去吧！", target: "happy_route" },
+                    { text: "抱歉，我要在家打游戏。", target: "sad_route" }
+                ]
+            },
+            // --- 开心路线 ---
+            "happy_route": {
+                name: "学妹",
+                text: "真的吗？！太棒了！(眼神发光)",
+                char: assets.happy, // 【开心】听到好消息，切换表情
+                next: "happy_end"
+            },
+            "happy_end": {
+                name: "系统",
+                text: "【Happy End - 电影院的约定】\n看着她开心的样子，你也觉得很温暖。",
+                char: assets.happy,
+                next: null
+            },
+            // --- 难过路线 ---
+            "sad_route": {
+                name: "学妹",
+                text: "啊……是、是这样啊。呵呵，你死定了……",
+                char: assets.sad, // 【难过】被拒绝，切换表情
+                next: "sad_end"
+            },
+            "sad_end": {
+                name: "系统",
+                text: "【Bad End - 错过的机会】\n她眼神愤恨的盯着你，情绪已经写在脸上。",
+                char: assets.sad,
+                next: null
             }
-            update() {
-                if (!isSpacePressed) {
-                    this.x += this.vx; this.y += this.vy;
-                    if (this.x < 0) this.x = width; if (this.x > width) this.x = 0;
-                    if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
-                } else {
-                    let dx = mouseX - this.x; let dy = mouseY - this.y;
-                    let distance = Math.sqrt(dx*dx + dy*dy);
-                    let force = Math.max(0, (800 - distance) / 800);
-                    this.x += (dx / distance) * force * 15;
-                    this.y += (dy / distance) * force * 15;
+        };
+
+        /* --- 3. 游戏引擎逻辑 (保持不变) --- */
+        let currentNode = "start";
+        let isTyping = false;
+        let fullText = "";
+        let charIndex = 0;
+        
+        const ui = {
+            bg: document.getElementById('background'),
+            char: document.getElementById('character'),
+            name: document.getElementById('name-tag'),
+            text: document.getElementById('text-content'),
+            choices: document.getElementById('choices-overlay')
+        };
+
+        function renderNode(nodeId) {
+            const node = script[nodeId];
+            if (!node) return;
+
+            if(node.bg) ui.bg.style.backgroundImage = `url('${node.bg}')`;
+
+            // 立绘逻辑
+            if (node.char) {
+                // 只有图片变了才重新加载（避免闪烁）
+                if(ui.char.getAttribute('src') !== node.char) {
+                    ui.char.src = node.char;
                 }
+                ui.char.style.opacity = 1;
+            } else {
+                ui.char.style.opacity = 0;
             }
-            draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+
+            ui.name.innerText = node.name;
+            ui.name.style.display = node.name ? "inline-block" : "none";
+
+            fullText = node.text;
+            ui.text.innerHTML = "";
+            charIndex = 0;
+            isTyping = true;
+            typeWriter();
         }
-        for (let i = 0; i < 150; i++) particles.push(new Particle());
-        function animate() { ctx.clearRect(0, 0, width, height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animate); }
-        animate();
 
-        // ============================================
-        // 2. 磁力导航 (Magnetic Links)
-        // ============================================
-        const magLinks = document.querySelectorAll('.mag-link');
-        
-        magLinks.forEach(link => {
-            link.addEventListener('mousemove', (e) => {
-                const rect = link.getBoundingClientRect();
-                const x = e.clientX - rect.left - rect.width / 2;
-                const y = e.clientY - rect.top - rect.height / 2;
-                // 限制移动范围，避免太夸张
-                link.style.transform = `translate(${x * 0.3}px, ${y * 0.5}px)`;
+        function typeWriter() {
+            if (charIndex < fullText.length) {
+                ui.text.innerHTML += fullText.charAt(charIndex) === '\n' ? '<br>' : fullText.charAt(charIndex);
+                charIndex++;
+                setTimeout(typeWriter, 30);
+            } else {
+                isTyping = false;
+                ui.text.classList.add("cursor");
+                if (script[currentNode].choices) showChoices(script[currentNode].choices);
+            }
+        }
+
+        function nextStep() {
+            const node = script[currentNode];
+            if (isTyping) {
+                charIndex = fullText.length;
+                ui.text.innerHTML = fullText;
+                isTyping = false;
+                ui.text.classList.add("cursor");
+                if (node.choices) showChoices(node.choices);
+                return;
+            }
+            if (node.choices) return;
+            if (!node.next) {
+                if(confirm("剧情结束。重来？")) location.reload();
+                return;
+            }
+            ui.text.classList.remove("cursor");
+            currentNode = node.next;
+            renderNode(currentNode);
+        }
+
+        function showChoices(choices) {
+            ui.choices.innerHTML = "";
+            ui.choices.style.display = "flex";
+            choices.forEach(choice => {
+                const btn = document.createElement("button");
+                btn.className = "choice-btn";
+                btn.innerText = choice.text;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    ui.choices.style.display = "none";
+                    currentNode = choice.target;
+                    renderNode(currentNode);
+                };
+                ui.choices.appendChild(btn);
             });
-            
-            link.addEventListener('mouseleave', () => {
-                link.style.transform = 'translate(0, 0)';
-            });
-        });
+        }
 
-        // ============================================
-        // 3. 声纳点击波纹 (Sonar Pulse)
-        // ============================================
-        window.addEventListener('click', (e) => {
-            // 不在特定交互区才触发
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.closest('#terminal-overlay')) return;
-
-            const sonar = document.createElement('div');
-            sonar.classList.add('sonar-wave');
-            sonar.style.left = e.clientX + 'px';
-            sonar.style.top = e.clientY + 'px';
-            document.body.appendChild(sonar);
-            
-            // 动画结束后移除
-            setTimeout(() => { sonar.remove(); }, 800);
-        });
-
-        // ============================================
-        // 4. 终端控制台 (Terminal Console)
-        // ============================================
-        const termOverlay = document.getElementById('terminal-overlay');
-        const termInput = document.getElementById('term-input');
-        const termOutput = document.getElementById('term-output');
-        let isTermOpen = false;
-
-        // 监听波浪号键 `~`
-        window.addEventListener('keydown', (e) => {
-            if (e.key === '`' || e.key === '~') {
-                e.preventDefault();
-                isTermOpen = !isTermOpen;
-                if (isTermOpen) {
-                    termOverlay.classList.add('open');
-                    setTimeout(() => termInput.focus(), 100);
-                } else {
-                    termOverlay.classList.remove('open');
-                }
-            }
-        });
-
-        // 终端指令处理
-        termInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const cmd = termInput.value.trim().toLowerCase();
-                const line = document.createElement('div');
-                line.className = 'term-line';
-                line.innerHTML = `<span style="color:#fff">visitor@void:~$</span> ${cmd}`;
-                termOutput.appendChild(line);
-                
-                let response = "";
-                switch(cmd) {
-                    case 'help': response = "Available commands: help, date, whoami, clear, status, locate"; break;
-                    case 'date': response = new Date().toString(); break;
-                    case 'whoami': response = "You are a wanderer in the digital wasteland."; break;
-                    case 'status': response = "System: STABLE. Reality: UNCERTAIN. Music: OPERATIONAL."; break;
-                    case 'locate': response = "Coordinates unknown. Sector 7 [Unanswered Realm]."; break;
-                    case 'hello': response = "Hello, world."; break;
-                    case 'clear': termOutput.innerHTML = ""; response = null; break;
-                    case '': response = null; break;
-                    default: response = `Command not found: ${cmd}`;
-                }
-
-                if (response) {
-                    const respLine = document.createElement('div');
-                    respLine.className = 'term-line';
-                    respLine.innerText = response;
-                    termOutput.appendChild(respLine);
-                }
-                
-                termInput.value = '';
-                // 滚动到底部
-                termOverlay.scrollTop = termOverlay.scrollHeight;
-            }
-        });
-
-
-        // ============================================
-        // 5. 原有功能 (Glitch, Tuner, Notes, Wave)
-        // ============================================
-        
-        // Glitch
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        document.querySelectorAll(".section-title").forEach(title => {
-            title.onmouseover = event => {
-                let iteration = 0; clearInterval(event.target.interval);
-                event.target.interval = setInterval(() => {
-                    event.target.innerText = event.target.innerText.split("").map((letter, index) => {
-                        if(index < iteration) return event.target.dataset.value[index]; return letters[Math.floor(Math.random() * 26)];
-                    }).join("");
-                    if(iteration >= event.target.dataset.value.length) clearInterval(event.target.interval);
-                    iteration += 1 / 3;
-                }, 30);
-            }
-        });
-
-        // Tuner
-        const slider = document.getElementById('freq-slider');
-        const secretMsg = document.getElementById('secret-email');
-        const signalStatus = document.getElementById('signal-status');
-        const targetFreq = Math.floor(Math.random() * 60) + 20;
-        slider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value); const diff = Math.abs(val - targetFreq);
-            if (diff < 15) {
-                const clarity = 1 - (diff / 15); secretMsg.style.filter = `blur(${diff}px)`; secretMsg.style.opacity = 0.2 + (clarity * 0.8);
-                if (diff < 2) { secretMsg.classList.add('decoded'); slider.classList.add('tuned'); signalStatus.innerText = "SIGNAL LOCKED"; signalStatus.style.color = "var(--accent-color)"; } 
-                else { secretMsg.classList.remove('decoded'); slider.classList.remove('tuned'); signalStatus.innerText = "TUNING..."; signalStatus.style.color = "var(--text-secondary)"; }
-            } else { secretMsg.style.filter = `blur(10px)`; secretMsg.style.opacity = 0.2; secretMsg.classList.remove('decoded'); slider.classList.remove('tuned'); signalStatus.innerText = "NO SIGNAL"; signalStatus.style.color = "var(--text-secondary)"; }
-        });
-
-        // Nihility Notes
-        const nihilityInput = document.getElementById('nihility-input'); const thoughtsContainer = document.getElementById('thoughts-container');
-        nihilityInput.addEventListener('keypress', function (e) { if (e.key === 'Enter' && this.value.trim() !== "") { const el = document.createElement('div'); el.classList.add('floating-thought'); el.innerText = this.value; el.style.left = (Math.random() * 70 + 10) + '%'; el.style.bottom = (Math.random() * 20 + 10) + '%'; thoughtsContainer.appendChild(el); setTimeout(() => el.remove(), 8000); this.value = ''; }});
-
-        // Waves
-        const waveCanvas = document.getElementById('wave-canvas'); const waveCtx = waveCanvas.getContext('2d'); const waveCard = document.getElementById('wave-card'); let waveW, waveH, wMouseX = 0, wMouseY = 0, waveTime = 0;
-        function resizeWave() { const rect = waveCard.getBoundingClientRect(); waveW = waveCanvas.width = rect.width; waveH = waveCanvas.height = rect.height; }
-        window.addEventListener('resize', resizeWave); setTimeout(resizeWave, 100);
-        waveCard.addEventListener('mousemove', (e) => { const rect = waveCard.getBoundingClientRect(); wMouseX = e.clientX - rect.left; wMouseY = e.clientY - rect.top; });
-        waveCard.addEventListener('mouseleave', () => { wMouseY = waveH / 2; });
-        function animateWaves() { waveCtx.clearRect(0, 0, waveW, waveH); waveTime += 0.05; waveCtx.lineWidth = 1.5; for (let i = 0; i < 3; i++) { waveCtx.beginPath(); waveCtx.strokeStyle = `rgba(100, 255, 218, ${0.3 + i * 0.2})`; for (let x = 0; x < waveW; x += 5) { const dist = Math.abs(x - wMouseX); const mouseFactor = Math.max(0, (200 - dist) / 200); const y = (waveH / 2) + Math.sin(x * 0.02 + waveTime + i) * 20 + Math.sin(x * 0.1 + waveTime) * (mouseFactor * (wMouseY/2)) * Math.sin(waveTime * 2); if (x === 0) waveCtx.moveTo(x, y); else waveCtx.lineTo(x, y); } waveCtx.stroke(); } requestAnimationFrame(animateWaves); } animateWaves();
-
-        // Modal
-        const modal = document.getElementById('note-modal'); const openBtn = document.getElementById('open-note-btn'); const closeBtn = document.querySelector('.close-btn'); const saveBtn = document.getElementById('save-btn'); const noteArea = document.getElementById('note-area'); const statusText = document.getElementById('save-status');
-        openBtn.addEventListener('click', () => { modal.style.display = 'flex'; setTimeout(() => modal.classList.add('active'), 10); const s = localStorage.getItem('unanswered_realm_note'); if(s) noteArea.value = s; });
-        const closeModal = () => { modal.classList.remove('active'); setTimeout(() => modal.style.display = 'none', 500); setTimeout(()=> { saveBtn.innerText="TRANSMIT SIGNAL"; saveBtn.style.background="var(--glass-bg)"; saveBtn.style.color="var(--accent-color)"; statusText.style.opacity=0;}, 500);};
-        closeBtn.addEventListener('click', closeModal); window.addEventListener('click', e => { if(e.target===modal) closeModal(); });
-        saveBtn.addEventListener('click', () => { saveBtn.innerText="TRANSMITTING..."; saveBtn.style.cursor="wait"; setTimeout(() => { localStorage.setItem('unanswered_realm_note', noteArea.value); saveBtn.innerText="SIGNAL SENT"; saveBtn.style.background="var(--accent-color)"; saveBtn.style.color="#000"; saveBtn.style.cursor="default"; statusText.style.opacity=1; setTimeout(closeModal, 1500); }, 800); });
-
-        // Observer
-        const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); entry.target.style.opacity = 1; entry.target.style.transform = 'translateY(0)'; } }); }, { threshold: 0.1 });
-        document.querySelectorAll('.observer-item').forEach(item => { item.style.opacity = 0; item.style.transform = 'translateY(50px)'; item.style.transition = 'all 1s ease-out'; observer.observe(item); });
-
-        // Music
-        const audio = document.getElementById('bgm'); const musicBtn = document.getElementById('music-btn'); audio.volume = 0.4;
-        musicBtn.addEventListener('click', () => { if (audio.paused) { audio.play(); musicBtn.classList.add('playing'); } else { audio.pause(); musicBtn.classList.remove('playing'); } });
-
+        let started = false;
+        document.body.onclick = () => {
+            if(!started){ started = true; renderNode(currentNode); }
+        };
     </script>
 </body>
 </html>
