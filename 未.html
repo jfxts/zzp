@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>未应之境 | The Unanswered Realm</title>
+    <style>
+        /* ----- 全局设置 ----- */
+        :root {
+            --bg-color: #05070a;
+            --text-primary: #e0e6ed;
+            --text-secondary: #94a3b8;
+            --accent-color: #64ffda; /* 青色信号灯 */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'PingFang SC', 'Helvetica Neue', sans-serif;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        ul { list-style: none; }
+
+        /* ----- 背景动画画布 ----- */
+        #canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        /* ----- 导航栏 ----- */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 2rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            opacity: 0.8;
+        }
+
+        .nav-links li {
+            display: inline-block;
+            margin-left: 3rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .nav-links li:hover { color: var(--accent-color); }
+
+        /* ----- 通用布局 ----- */
+        section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 10%;
+            position: relative;
+        }
+
+        /* ----- 1. 首页 (Hero) ----- */
+        .hero h1 {
+            font-size: 5rem;
+            font-weight: 200;
+            line-height: 1.1;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #fff, #666);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 1.5s ease forwards 0.5s;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 3rem;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 1.5s ease forwards 0.8s;
+        }
+
+        .btn-explore {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+            transition: 0.4s;
+            opacity: 0;
+            animation: fadeIn 2s ease forwards 1.2s;
+            cursor: pointer;
+        }
+
+        .btn-explore:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.1);
+        }
+
+        /* ----- 2. 独白 (About) ----- */
+        .section-title {
+            font-size: 4rem;
+            opacity: 0.05;
+            position: absolute;
+            top: 10%;
+            left: 5%;
+            font-weight: 900;
+            z-index: -1;
+        }
+
+        .content-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 3rem;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            transform: translateY(50px);
+            opacity: 0;
+            transition: 1s ease;
+        }
+
+        .content-card.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .quote {
+            font-style: italic;
+            border-left: 2px solid var(--accent-color);
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            color: var(--text-secondary);
+        }
+
+        /* ----- 3. 足迹 (Projects/Gallery) ----- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .grid-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid transparent;
+            padding: 2rem;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            transition: 0.4s;
+            cursor: pointer;
+        }
+
+        .grid-item:hover {
+            border-color: var(--text-secondary);
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .grid-item h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .grid-item span { font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1px; }
+
+        /* ----- 4. 信号 (Contact) ----- */
+        .signal-container {
+            text-align: center;
+        }
+        
+        .pulse {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            margin: 0 auto 2rem;
+            box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        /* ----- 动画关键帧 ----- */
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(100, 255, 218, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0); }
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 3rem; }
+            nav { padding: 1.5rem 2rem; }
+            .nav-links { display: none; } /* 简化处理 */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景粒子动画 -->
+    <canvas id="canvas-bg"></canvas>
+
+    <!-- 导航 -->
+    <nav>
+        <div class="logo">未应之境</div>
+        <ul class="nav-links">
+            <li>独白 (Monologue)</li>
+            <li>足迹 (Traces)</li>
+            <li>回响 (Echoes)</li>
+        </ul>
+    </nav>
+
+    <!-- 1. 首页 -->
+    <section class="hero">
+        <h1>凡所未应<br>皆为佳境</h1>
+        <p>这里是思维的边缘，存放着那些未被解答的问题、未完成的代码和不想被打扰的时刻。</p>
+        <a href="#about" class="btn-explore">开始探索</a>
+    </section>
+
+    <!-- 2. 独白 (关于) -->
+    <section id="about">
+        <div class="section-title">ABOUT</div>
+        <div class="content-card observer-item">
+            <h2>关于构建者</h2>
+            <br>
+            <p>在这个信息过载的时代，我试图保留一片“未被定义”的区域。</p>
+            <div class="quote">
+                "并不是所有的呼喊都需要回应，有时候，仅仅是把声音传递出去，就已经完成了它的使命。"
+            </div>
+            <p>我是一名开发者/设计师/写作者。我在这里记录那些尚未成熟的想法，以及在数字荒原上的探索足迹。</p>
+        </div>
+    </section>
+
+    <!-- 3. 足迹 (作品) -->
+    <section id="works">
+        <div class="section-title">WORKS</div>
+        <div class="grid">
+            <div class="grid-item observer-item">
+                <span>PROJECT 01</span>
+                <h3>虚无笔记</h3>
+                <p>一个极简的思维导图工具，用于捕捉稍纵即逝的灵感。</p>
+            </div>
+            <div class="grid-item observer-item">
+                <span>PROJECT 02</span>
+                <h3>失落的波段</h3>
+                <p>生成式音频可视化实验，将噪音转化为旋律。</p>
+            </div>
+            <div class="grid-item observer-item">
+                <span>WRITING</span>
+                <h3>给未来的信</h3>
+                <p>关于技术、哲学与未来生活方式的随笔集。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. 信号 (联系) -->
+    <section id="contact">
+        <div class="signal-container observer-item">
+            <div class="pulse"></div>
+            <h2>发射信号</h2>
+            <p style="color: var(--text-secondary); margin: 1rem 0 2rem;">如果你也在探索这片荒原，欢迎留下你的频率。</p>
+            <a href="mailto:your-email@example.com" class="btn-explore">SEND MESSAGE</a>
+        </div>
+    </section>
+
+    <script>
+        // 1. 简单的粒子背景动画 (Canvas)
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5; // 速度极慢，营造漂浮感
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2;
+                this.alpha = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 初始化粒子
+        for (let i = 0; i < 100; i++) {
+            particles.push(new Particle());
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // 2. 滚动显现效果 (Intersection Observer)
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    // 稍微上移并淡入的效果在CSS中定义
+                    entry.target.style.opacity = 1;
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.observer-item').forEach(item => {
+            item.style.opacity = 0;
+            item.style.transform = 'translateY(50px)';
+            item.style.transition = 'all 1s ease-out';
+            observer.observe(item);
+        });
+
+        // 3. 点击“开始探索”平滑滚动
+        document.querySelector('.btn-explore').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelector('#about').scrollIntoView({ behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>
