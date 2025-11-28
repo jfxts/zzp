@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>失落的波段 | Lost Frequencies</title>
+    <style>
+        :root { --bg-color: #05070a; --text-primary: #e0e6ed; --accent-color: #64ffda; --glass-bg: rgba(255, 255, 255, 0.03); --glass-border: rgba(255, 255, 255, 0.05); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg-color); color: var(--text-primary); font-family: 'PingFang SC', sans-serif; min-height: 100vh; }
+        #canvas-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.6; }
+        
+        header { padding: 2rem 10%; display: flex; align-items: center; backdrop-filter: blur(5px); position: sticky; top: 0; z-index: 10; }
+        .back-btn { color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-btn:hover { color: var(--accent-color); }
+        .page-title { margin-left: auto; letter-spacing: 2px; color: var(--accent-color); font-family: monospace; }
+
+        .container { max-width: 900px; margin: 4rem auto; padding: 0 20px; }
+
+        /* 视频容器 */
+        .video-wrapper {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        video { width: 100%; display: block; border-radius: 2px; }
+
+        /* 装饰性的波段动画 */
+        .frequency-viz {
+            display: flex; justify-content: center; gap: 5px; height: 60px; align-items: center; margin-bottom: 3rem;
+        }
+        .freq-bar {
+            width: 4px; background: var(--accent-color);
+            animation: wave 1s infinite ease-in-out;
+            border-radius: 2px;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+        @keyframes wave { 0%, 100% { height: 10px; opacity: 0.5; } 50% { height: 50px; opacity: 1; } }
+
+        .description { text-align: center; color: #94a3b8; max-width: 600px; margin: 0 auto; line-height: 1.8; }
+        
+        /* 随机化动画延迟 */
+        .freq-bar:nth-child(odd) { animation-duration: 0.8s; }
+        .freq-bar:nth-child(even) { animation-duration: 1.2s; }
+        .freq-bar:nth-child(3n) { animation-duration: 1.5s; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas-bg"></canvas>
+    <header><a href="index.html" class="back-btn">&larr; Return</a><div class="page-title">SIGNAL_DETECTED</div></header>
+
+    <div class="container">
+        <!-- 视觉波形装饰 -->
+        <div class="frequency-viz">
+            <div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div>
+            <div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div>
+            <div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div>
+        </div>
+
+        <!-- 视频区域 (之前在 Letters 里的视频移到了这里) -->
+        <div class="video-wrapper">
+            <!-- 替换成你的视频文件 -->
+            <video controls autoplay muted loop>
+                <source src="https://cdn.pixabay.com/video/2020/12/13/59385-492982878_tiny.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <div class="description">
+            <h2>捕捉到的信号 #042</h2>
+            <br>
+            <p>这是一段来自深层网络的视觉回响。在剥离了色彩与噪音之后，留下的只有纯粹的律动。它代表了那些在深夜里被创造出来，却从未公开发布的“失落代码”。</p>
+        </div>
+    </div>
+
+    <!-- 复用背景JS -->
+    <script>
+        const canvas = document.getElementById('canvas-bg'); const ctx = canvas.getContext('2d');
+        let width, height, particles = [];
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        class Particle {
+            constructor() { this.x = Math.random()*width; this.y = Math.random()*height; this.vx = (Math.random()-0.5)*0.3; this.vy = (Math.random()-0.5)*0.3; this.size = Math.random()*2; this.alpha = Math.random()*0.5+0.1; }
+            update() { this.x+=this.vx; this.y+=this.vy; if(this.x<0)this.x=width;if(this.x>width)this.x=0;if(this.y<0)this.y=height;if(this.y>height)this.y=0; }
+            draw() { ctx.fillStyle=`rgba(255,255,255,${this.alpha})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+        }
+        for(let i=0;i<80;i++) particles.push(new Particle());
+        function animate(){ ctx.clearRect(0,0,width,height); particles.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(animate); } animate();
+    </script>
+</body>
+</html>

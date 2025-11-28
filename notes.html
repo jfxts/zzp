@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虚无笔记 | Void Notes</title>
+    <style>
+        /* 复用主页的基础变量 */
+        :root {
+            --bg-color: #05070a;
+            --text-primary: #e0e6ed;
+            --text-secondary: #94a3b8;
+            --accent-color: #64ffda;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --code-bg: rgba(0, 0, 0, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'PingFang SC', 'Menlo', monospace; /* 使用等宽字体增加极客感 */
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        /* 背景画布 */
+        #canvas-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; opacity: 0.6; pointer-events: none;
+        }
+
+        /* 顶部导航 */
+        header {
+            padding: 2rem 10%;
+            display: flex;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .back-btn {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            transition: 0.3s;
+            font-family: sans-serif;
+        }
+        .back-btn:hover { color: var(--accent-color); transform: translateX(-5px); }
+
+        .page-title {
+            margin-left: auto;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: var(--accent-color);
+        }
+
+        /* 内容区域 */
+        .container {
+            max-width: 700px;
+            margin: 4rem auto 8rem;
+            padding: 0 20px;
+        }
+
+        /* 笔记列表项 */
+        .note-item {
+            border-left: 2px solid var(--glass-border);
+            padding-left: 2rem;
+            margin-bottom: 4rem;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.8s ease forwards;
+        }
+
+        /* 小圆点装饰 */
+        .note-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            background: var(--bg-color);
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .note-item:hover::before {
+            border-color: var(--accent-color);
+            background: var(--accent-color);
+        }
+
+        .note-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tag {
+            color: var(--accent-color);
+            background: rgba(100, 255, 218, 0.1);
+            padding: 0 6px;
+            border-radius: 2px;
+        }
+
+        .note-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .note-content {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            text-align: justify;
+        }
+
+        /* 引用块样式 */
+        blockquote {
+            background: var(--glass-bg);
+            padding: 1rem;
+            border-left: 3px solid var(--accent-color);
+            margin: 1rem 0;
+            color: var(--text-primary);
+            font-style: italic;
+        }
+
+        /* 代码块样式 */
+        .code-block {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #d4d4d4;
+            overflow-x: auto;
+            margin: 1rem 0;
+            border: 1px solid var(--glass-border);
+        }
+
+        /* 动画延迟 */
+        .note-item:nth-child(1) { animation-delay: 0.1s; }
+        .note-item:nth-child(2) { animation-delay: 0.2s; }
+        .note-item:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas-bg"></canvas>
+
+    <header>
+        <a href="index.html" class="back-btn"><span>&larr;</span> Return</a>
+        <div class="page-title">VOID NOTES_</div>
+    </header>
+
+    <div class="container">
+        
+        <!-- 笔记 1：纯文本 + 标签 -->
+        <div class="note-item">
+            <div class="note-meta">
+                <span>2024.05.22</span>
+                <span class="tag">#Philosophy</span>
+            </div>
+            <h2 class="note-title">碎片化时代的阅读</h2>
+            <div class="note-content">
+                <p>最近发现自己越来越难以读完一本长篇小说。信息的获取变成了流式（Stream）的，而非块状（Block）的。我们像是在河边用筛子淘金，留下的只有只言片语。</p>
+                <p>试图重新建立“深度阅读”的习惯，从强制自己每天关闭网络一小时开始。</p>
+            </div>
+        </div>
+
+        <!-- 笔记 2：带代码块 -->
+        <div class="note-item">
+            <div class="note-meta">
+                <span>2024.04.10</span>
+                <span class="tag">#Snippet</span>
+                <span class="tag">#CSS</span>
+            </div>
+            <h2 class="note-title">磨砂玻璃效果的参数调整</h2>
+            <div class="note-content">
+                <p>为了达到完美的 Glassmorphism 效果，背景的透明度和模糊度需要特定的比例。记录一下当前网站用的参数：</p>
+                <div class="code-block">
+.glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+                </div>
+                <p>关键在于边框的透明度要比背景稍微高一点点，这样才能有“厚度”感。</p>
+            </div>
+        </div>
+
+        <!-- 笔记 3：带引用 -->
+        <div class="note-item">
+            <div class="note-meta">
+                <span>2024.03.15</span>
+                <span class="tag">#Idea</span>
+            </div>
+            <h2 class="note-title">关于“未应之境”的命名</h2>
+            <div class="note-content">
+                <p>为什么叫未应之境？因为在计算机网络中，Pending (待定) 是一种美妙的状态。</p>
+                <blockquote>
+                    "It's not failed, it's just not answered yet."
+                </blockquote>
+                <p>这种状态充满了可能性，就像薛定谔的猫。在请求被响应之前，一切皆有可能。</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 背景粒子 JS -->
+    <script>
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.3; 
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.size = Math.random() * 2;
+                this.alpha = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if(this.x < 0) this.x = width; if(this.x > width) this.x = 0;
+                if(this.y < 0) this.y = height; if(this.y > height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        for(let i=0; i<80; i++) particles.push(new Particle());
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>

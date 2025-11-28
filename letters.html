@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>给未来的信 | Letters</title>
+    <style>
+        :root { --bg-color: #05070a; --text-primary: #e0e6ed; --accent-color: #64ffda; --glass-bg: rgba(255, 255, 255, 0.03); --glass-border: rgba(255, 255, 255, 0.05); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg-color); color: var(--text-primary); font-family: 'PingFang SC', sans-serif; line-height: 1.8; min-height: 100vh; }
+        #canvas-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.6; pointer-events: none; }
+        
+        header { padding: 2rem 10%; display: flex; align-items: center; backdrop-filter: blur(5px); position: sticky; top: 0; z-index: 10; }
+        .back-btn { color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-btn:hover { color: var(--accent-color); }
+        .page-title { margin-left: auto; font-weight: 300; letter-spacing: 2px; }
+
+        .container { max-width: 800px; margin: 4rem auto 8rem; padding: 0 20px; }
+
+        .letter-card { background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 2.5rem; margin-bottom: 3rem; border-radius: 4px; opacity: 0; transform: translateY(30px); animation: fadeUp 1s ease forwards; }
+        .letter-card:nth-child(1) { animation-delay: 0.2s; } .letter-card:nth-child(2) { animation-delay: 0.4s; }
+        .date-stamp { font-family: monospace; color: var(--accent-color); font-size: 0.85rem; margin-bottom: 1rem; display: block; opacity: 0.8; }
+        .letter-title { font-size: 1.8rem; margin-bottom: 1.5rem; font-weight: 400; color: #fff; }
+        .letter-body { color: #94a3b8; margin-bottom: 2rem; font-size: 1.05rem; text-align: justify; }
+        .media-container img { width: 100%; display: block; border-radius: 2px; }
+        .signature { margin-top: 2rem; text-align: right; font-style: italic; opacity: 0.6; }
+
+        /* ----- 擦拭特效区域样式 ----- */
+        .scratch-container {
+            position: relative;
+            width: 100%;
+            height: 200px; /* 控制隐藏区域高度 */
+            margin-top: 1.5rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            overflow: hidden;
+            background: #111; /* 底色 */
+            display: flex; justify-content: center; align-items: center; text-align: center;
+            user-select: none;
+        }
+
+        /* 隐藏的文字 */
+        .hidden-message {
+            position: absolute;
+            width: 80%;
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 1; /* 在画布下面 */
+            pointer-events: none;
+        }
+
+        /* 覆盖在上面的画布 */
+        #scratch-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2; /* 在文字上面 */
+            cursor: crosshair;
+            transition: opacity 1s;
+        }
+        
+        .hint-text {
+            position: absolute; top: 10px; right: 10px; font-size: 0.7rem; color: #fff; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 2px; pointer-events: none; z-index: 3;
+        }
+
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <canvas id="canvas-bg"></canvas>
+    <header><a href="index.html" class="back-btn">&larr; Return</a><div class="page-title">LETTERS</div></header>
+
+    <div class="container">
+        
+        <!-- 信件 1：图片 (保持不变) -->
+        <article class="letter-card">
+            <span class="date-stamp">2024.05.20 / 23:45 PM</span>
+            <h2 class="letter-title">#01 关于凝视深渊</h2>
+            <div class="letter-body">
+                <p>今天我在思考关于“观测”的意义。当我们在编写代码构建虚拟世界时，是否也被屏幕另一端的某种逻辑所构建？</p>
+            </div>
+            <div class="media-container">
+                <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop" alt="深空">
+            </div>
+            <div class="signature">— Observer K.</div>
+        </article>
+
+        <!-- 信件 2：擦拭特效 (新功能!) -->
+        <article class="letter-card">
+            <span class="date-stamp">FUTURE / ENCRYPTED</span>
+            <h2 class="letter-title">#02 隐藏的密语</h2>
+            <div class="letter-body">
+                <p>有些话无法直接诉说，只能被掩埋在时间的迷雾下。如果你执意要寻找答案，请擦去下方的迷雾。</p>
+            </div>
+
+            <!-- 交互区域 -->
+            <div class="scratch-container" id="js-container">
+                <div class="hint-text">Try to wipe / 尝试擦拭</div>
+                <!-- 隐藏的文字 -->
+                <div class="hidden-message">
+                    "在一切结束之前，<br>别忘了我们曾如此热烈地燃烧过。"
+                </div>
+                <!-- 遮罩画布 -->
+                <canvas id="scratch-canvas"></canvas>
+            </div>
+
+            <div class="signature">— 你的潜意识</div>
+        </article>
+    </div>
+
+    <!-- 背景粒子 + 擦拭逻辑 JS -->
+    <script>
+        // 1. 背景粒子
+        const canvasBg = document.getElementById('canvas-bg'); const ctxBg = canvasBg.getContext('2d');
+        let w, h, parts = [];
+        function rs() { w = canvasBg.width = window.innerWidth; h = canvasBg.height = window.innerHeight; }
+        window.addEventListener('resize', rs); rs();
+        class Pt {
+            constructor() { this.x=Math.random()*w; this.y=Math.random()*h; this.vx=(Math.random()-0.5)*0.3; this.vy=(Math.random()-0.5)*0.3; this.s=Math.random()*2; this.a=Math.random()*0.5+0.1; }
+            u() { this.x+=this.vx; this.y+=this.vy; if(this.x<0)this.x=w;if(this.x>w)this.x=0;if(this.y<0)this.y=h;if(this.y>h)this.y=0; }
+            d() { ctxBg.fillStyle=`rgba(255,255,255,${this.a})`; ctxBg.beginPath(); ctxBg.arc(this.x,this.y,this.s,0,Math.PI*2); ctxBg.fill(); }
+        }
+        for(let i=0;i<80;i++) parts.push(new Pt());
+        function anim(){ ctxBg.clearRect(0,0,w,h); parts.forEach(p=>{p.u();p.d();}); requestAnimationFrame(anim); } anim();
+
+        // 2. 擦拭特效逻辑
+        const container = document.getElementById('js-container');
+        const canvas = document.getElementById('scratch-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        function initScratch() {
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            
+            // 填充迷雾层 (灰色带点透明)
+            ctx.fillStyle = '#2d3748'; // 迷雾颜色
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 添加一些文字在迷雾上装饰
+            ctx.fillStyle = '#4a5568';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText("FOG AREA", canvas.width/2, canvas.height/2);
+            
+            // 设置混合模式：destination-out (会让画过的地方变透明)
+            ctx.globalCompositeOperation = 'destination-out';
+        }
+
+        // 擦拭函数
+        function scratch(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            // 兼容鼠标和触摸
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+            ctx.beginPath();
+            ctx.arc(x, y, 30, 0, Math.PI * 2); // 30是笔刷大小
+            ctx.fill();
+        }
+
+        // 事件监听
+        canvas.addEventListener('mousedown', () => isDrawing = true);
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mousemove', scratch);
+        
+        // 触摸屏支持
+        canvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
+        canvas.addEventListener('touchend', () => isDrawing = false);
+        canvas.addEventListener('touchmove', scratch);
+
+        // 窗口大小改变时重置，虽然会重置涂层，但为了适配简单处理
+        window.addEventListener('load', initScratch);
+    </script>
+</body>
+</html>
