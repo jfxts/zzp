@@ -5,87 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>生日问答验证</title>
     <style>
-        /* 这里是真正的网页内容样式 */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* 验证层的样式：覆盖全屏 */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        
+        /* 验证层样式 */
         #gatekeeper {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999; /* 保证在最上层 */
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
         }
 
-        /* 问答框的样式 */
         .login-box {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            text-align: center;
-            width: 300px;
+            background: white; padding: 40px; border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; width: 300px;
         }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        .input-group input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+        button { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px;}
+        button:hover { background-color: #45a049; }
+        .error-msg { color: red; margin-top: 10px; font-size: 14px; display: none; }
 
-        .login-box h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box; /* 确保padding不撑大宽度 */
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        .error-msg {
-            color: red;
-            margin-top: 10px;
-            font-size: 14px;
-            display: none; /* 默认隐藏 */
-        }
-
-        /* 真正的网页内容，默认隐藏 */
+        /* 主内容区域 */
         #main-content {
-            display: none; 
+            display: none; /* 默认隐藏，必须等JS判断后显示 */
             padding: 20px;
             text-align: center;
         }
@@ -93,28 +37,25 @@
 </head>
 <body>
 
-    <!-- 1. 验证层（门卫） -->
+    <!-- 1. 验证层 -->
     <div id="gatekeeper">
         <div class="login-box">
             <h2>访客验证</h2>
-            
             <div class="input-group">
                 <label>它的生日是什么时候？</label>
                 <input type="text" id="answer1" placeholder="例如：1.01">
             </div>
-
             <div class="input-group">
                 <label>我的生日是什么时候？</label>
                 <input type="text" id="answer2" placeholder="例如：1.01">
             </div>
-
             <button onclick="checkAnswers()">进入网页</button>
             <p class="error-msg" id="errorMsg">回答错误，请重新思考！</p>
         </div>
     </div>
 
     <!-- 2. 真正的网页内容 -->
-    <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -146,163 +87,89 @@
 
         /* ----- 背景动画画布 ----- */
         #canvas-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.6;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; opacity: 0.6;
         }
 
         /* ----- 导航栏 ----- */
         nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            padding: 2rem 4rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 100;
-            backdrop-filter: blur(5px);
+            position: fixed; top: 0; width: 100%; padding: 2rem 4rem;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 100; backdrop-filter: blur(5px);
         }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 300;
-            letter-spacing: 4px;
-            opacity: 0.8;
-        }
-
-        .nav-links li {
-            display: inline-block;
-            margin-left: 3rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-        }
+        .logo { font-size: 1.5rem; font-weight: 300; letter-spacing: 4px; opacity: 0.8; }
+        .nav-links li { display: inline-block; margin-left: 3rem; font-size: 0.9rem; color: var(--text-secondary); cursor: pointer; }
         .nav-links li:hover { color: var(--accent-color); }
 
         /* ----- 通用布局 ----- */
         section {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 0 10%;
-            position: relative;
+            min-height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; padding: 0 10%; position: relative;
         }
 
         /* ----- 1. 首页 (Hero) ----- */
         .hero h1 {
-            font-size: 5rem;
-            font-weight: 200;
-            line-height: 1.1;
-            margin-bottom: 2rem;
+            font-size: 5rem; font-weight: 200; line-height: 1.1; margin-bottom: 2rem;
             background: linear-gradient(to right, #fff, #666);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            opacity: 0;
-            transform: translateY(30px);
-            animation: fadeUp 1.5s ease forwards 0.5s;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            opacity: 0; transform: translateY(30px); animation: fadeUp 1.5s ease forwards 0.5s;
         }
 
         .hero p {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin-bottom: 3rem;
-            opacity: 0;
-            transform: translateY(30px);
-            animation: fadeUp 1.5s ease forwards 0.8s;
+            font-size: 1.2rem; color: var(--text-secondary); max-width: 600px; margin-bottom: 3rem;
+            opacity: 0; transform: translateY(30px); animation: fadeUp 1.5s ease forwards 0.8s;
         }
 
         .btn-explore {
-            display: inline-block;
-            padding: 1rem 2.5rem;
-            border: 1px solid var(--glass-border);
-            background: var(--glass-bg);
-            color: var(--text-primary);
-            letter-spacing: 2px;
-            font-size: 0.9rem;
-            transition: 0.4s;
-            opacity: 0;
-            animation: fadeIn 2s ease forwards 1.2s;
-            cursor: pointer;
+            display: inline-block; padding: 1rem 2.5rem;
+            border: 1px solid var(--glass-border); background: var(--glass-bg);
+            color: var(--text-primary); letter-spacing: 2px; font-size: 0.9rem;
+            transition: 0.4s; opacity: 0; animation: fadeIn 2s ease forwards 1.2s; cursor: pointer;
         }
-
-        .btn-explore:hover {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 20px rgba(100, 255, 218, 0.1);
-        }
+        .btn-explore:hover { border-color: var(--accent-color); box-shadow: 0 0 20px rgba(100, 255, 218, 0.1); }
 
         /* ----- 2. 独白 (About) ----- */
         .section-title {
-            font-size: 4rem;
-            opacity: 0.05;
-            position: absolute;
-            top: 10%;
-            left: 5%;
-            font-weight: 900;
-            z-index: -1;
+            font-size: 4rem; opacity: 0.05; position: absolute;
+            top: 10%; left: 5%; font-weight: 900; z-index: -1;
         }
 
         .content-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            padding: 3rem;
-            max-width: 800px;
-            backdrop-filter: blur(10px);
-            transform: translateY(50px);
-            opacity: 0;
-            transition: 1s ease;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            padding: 3rem; max-width: 800px; backdrop-filter: blur(10px);
+            transform: translateY(50px); opacity: 0; transition: 1s ease;
         }
-
-        .content-card.visible {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        .content-card.visible { transform: translateY(0); opacity: 1; }
 
         .quote {
-            font-style: italic;
-            border-left: 2px solid var(--accent-color);
-            padding-left: 1.5rem;
-            margin: 1.5rem 0;
-            color: var(--text-secondary);
+            font-style: italic; border-left: 2px solid var(--accent-color);
+            padding-left: 1.5rem; margin: 1.5rem 0; color: var(--text-secondary);
         }
 
         /* ----- 3. 足迹 (Projects) ----- */
         .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem; margin-top: 2rem;
         }
 
-        /* 修改：grid-item 兼容 a 标签样式 */
+        /* 统一的链接卡片样式 */
         .grid-item {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid transparent;
-            padding: 2rem;
-            height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            transition: 0.4s;
-            cursor: pointer;
-            text-decoration: none; 
+            background: rgba(255,255,255,0.02); border: 1px solid transparent;
+            padding: 2rem; height: 300px; display: flex; flex-direction: column;
+            justify-content: flex-end; transition: 0.4s; cursor: pointer; text-decoration: none;
         }
 
         .grid-item:hover {
-            border-color: var(--text-secondary);
-            transform: translateY(-5px);
+            border-color: var(--text-secondary); transform: translateY(-5px);
             background: rgba(255,255,255,0.05);
         }
 
         .grid-item h3 { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-primary); }
         .grid-item span { font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1px; }
         .grid-item p { color: var(--text-secondary); }
+        
+        .arrow-hint { margin-top: 1rem; color: var(--accent-color); font-size: 0.8rem; }
 
         /* ----- 4. 信号 (Contact) ----- */
         .signal-container { text-align: center; }
@@ -315,62 +182,28 @@
 
         /* ---------------- 音乐播放器样式 ---------------- */
         .music-control {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 50px;
-            height: 50px;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            z-index: 999;
-            backdrop-filter: blur(5px);
-            transition: all 0.3s;
+            position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; z-index: 999; backdrop-filter: blur(5px); transition: all 0.3s;
         }
-
-        .music-control:hover {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 15px rgba(100, 255, 218, 0.2);
-        }
+        .music-control:hover { border-color: var(--accent-color); box-shadow: 0 0 15px rgba(100, 255, 218, 0.2); }
 
         .sound-wave { display: flex; align-items: flex-end; height: 20px; gap: 3px; }
-        
-        .bar {
-            width: 3px;
-            background: var(--text-primary);
-            border-radius: 2px;
-            animation: none;
-            height: 4px;
-        }
-
-        .music-control.playing .bar {
-            background: var(--accent-color);
-            animation: equalize 1s infinite ease-in-out;
-        }
-
+        .bar { width: 3px; background: var(--text-primary); border-radius: 2px; height: 4px; }
+        .music-control.playing .bar { background: var(--accent-color); animation: equalize 1s infinite ease-in-out; }
         .music-control.playing .bar:nth-child(1) { animation-delay: 0.1s; }
         .music-control.playing .bar:nth-child(2) { animation-delay: 0.3s; }
         .music-control.playing .bar:nth-child(3) { animation-delay: 0.5s; }
         .music-control.playing .bar:nth-child(4) { animation-delay: 0.2s; }
 
-        @keyframes equalize {
-            0% { height: 4px; }
-            50% { height: 16px; }
-            100% { height: 4px; }
-        }
-
+        @keyframes equalize { 0% { height: 4px; } 50% { height: 16px; } 100% { height: 4px; } }
         .music-hint {
-            position: fixed; bottom: 38px; right: 90px;
-            font-size: 12px; color: var(--text-secondary);
-            opacity: 0; transition: 0.5s; pointer-events: none;
+            position: fixed; bottom: 38px; right: 90px; font-size: 12px;
+            color: var(--text-secondary); opacity: 0; transition: 0.5s; pointer-events: none;
         }
         .music-control:hover + .music-hint { opacity: 1; }
 
-        /* ----- 动画关键帧 ----- */
         @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { to { opacity: 1; } }
         @keyframes pulse-green {
@@ -379,104 +212,71 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0); }
         }
 
-        /* 移动端适配 */
         @media (max-width: 768px) {
-            .hero h1 { font-size: 3rem; }
-            nav { padding: 1.5rem 2rem; }
-            .nav-links { display: none; }
-            .music-control { bottom: 20px; right: 20px; }
+            .hero h1 { font-size: 3rem; } nav { padding: 1.5rem 2rem; }
+            .nav-links { display: none; } .music-control { bottom: 20px; right: 20px; }
             .music-hint { display: none; }
         }
     </style>
 </head>
 <body>
-
-    <!-- 背景粒子动画 -->
     <canvas id="canvas-bg"></canvas>
-
-    <!-- 音乐文件 -->
     <audio id="bgm" loop>
         <source src="https://cdn.pixabay.com/download/audio/2022/03/09/audio_822f9bc9a7.mp3?filename=space-atmosphere-21397.mp3" type="audio/mpeg">
     </audio>
-
-    <!-- 音乐播放控制器 -->
-    <div class="music-control" id="music-btn" title="点击播放/暂停背景音乐">
-        <div class="sound-wave">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-        </div>
-    </div>
+    <div class="music-control" id="music-btn" title="点击播放/暂停"><div class="sound-wave"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div>
     <div class="music-hint">Sound On / Off</div>
 
-    <!-- 导航 -->
     <nav>
         <div class="logo">未应之境</div>
-        <ul class="nav-links">
-            <li>独白 (Monologue)</li>
-            <li>足迹 (Traces)</li>
-            <li>回响 (Echoes)</li>
-        </ul>
+        <ul class="nav-links"><li>独白</li><li>足迹</li><li>回响</li></ul>
     </nav>
 
-    <!-- 1. 首页 -->
     <section class="hero">
         <h1>凡所未应<br>皆为佳境</h1>
         <p>这里是思维的边缘，存放着那些未被解答的问题、未完成的代码和不想被打扰的时刻。</p>
         <a href="#about" class="btn-explore">开始探索</a>
     </section>
 
-    <!-- 2. 独白 (关于) -->
     <section id="about">
         <div class="section-title">ABOUT</div>
         <div class="content-card observer-item">
-            <h2>关于构建者</h2>
-            <br>
+            <h2>关于构建者</h2><br>
             <p>在这个信息过载的时代，我试图保留一片“未被定义”的区域。</p>
-            <div class="quote">
-                "并不是所有的呼喊都需要回应，有时候，仅仅是把声音传递出去，就已经完成了它的使命。"
-            </div>
+            <div class="quote">"并不是所有的呼喊都需要回应，有时候，仅仅是把声音传递出去，就已经完成了它的使命。"</div>
             <p>我是一名开发者/设计师/写作者。我在这里记录那些尚未成熟的想法，以及在数字荒原上的探索足迹。</p>
         </div>
     </section>
 
-    <!-- 3. 足迹 (作品) -->
     <section id="works">
         <div class="section-title">WORKS</div>
         <div class="grid">
-            
-            <!-- 项目 1：虚无笔记 (已连接到 notes.html) -->
+            <!-- 1. 虚无笔记 -->
             <a href="notes.html" class="grid-item observer-item">
                 <span>PROJECT 01</span>
                 <h3>虚无笔记</h3>
                 <p>思维的碎片整理，关于代码逻辑与混乱日常的观察记录。</p>
-                <div style="margin-top: 1rem; color: var(--accent-color); font-size: 0.8rem;">
-                    ENTER ARCHIVE &rarr;
-                </div>
+                <div class="arrow-hint">ENTER ARCHIVE &rarr;</div>
             </a>
             
-            <!-- 项目 2：失落的波段 (保持原样) -->
-            <div class="grid-item observer-item">
+            <!-- 2. 失落的波段 (现在可以点击了!) -->
+            <a href="frequencies.html" class="grid-item observer-item">
                 <span>PROJECT 02</span>
                 <h3>失落的波段</h3>
                 <p>生成式音频可视化实验，将噪音转化为旋律。</p>
-            </div>
+                <div class="arrow-hint">LISTEN SIGNAL &rarr;</div>
+            </a>
             
-            <!-- 项目 3：给未来的信 (已连接到 letters.html) -->
+            <!-- 3. 给未来的信 -->
             <a href="letters.html" class="grid-item observer-item">
                 <span>WRITING</span>
                 <h3>给未来的信</h3>
                 <p>关于技术、哲学与未来生活方式的影像与随笔。</p>
-                <div style="margin-top: 1rem; color: var(--accent-color); font-size: 0.8rem;">
-                    READ MORE &rarr;
-                </div>
+                <div class="arrow-hint">READ SECRETS &rarr;</div>
             </a>
-
         </div>
     </section>
 
-    <!-- 4. 信号 (联系) -->
     <section id="contact">
         <div class="signal-container observer-item">
             <div class="pulse"></div>
@@ -487,128 +287,92 @@
     </section>
 
     <script>
-        // --- 1. 背景粒子动画 ---
         const canvas = document.getElementById('canvas-bg');
         const ctx = canvas.getContext('2d');
-        let width, height;
-        let particles = [];
-
-        function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
+        let width, height, particles = [];
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
         class Particle {
             constructor() {
-                this.x = Math.random() * width;
-                this.y = Math.random() * height;
-                this.vx = (Math.random() - 0.5) * 0.5; 
-                this.vy = (Math.random() - 0.5) * 0.5;
-                this.size = Math.random() * 2;
-                this.alpha = Math.random() * 0.5 + 0.1;
+                this.x = Math.random() * width; this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2; this.alpha = Math.random() * 0.5 + 0.1;
             }
             update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                if (this.x < 0) this.x = width;
-                if (this.x > width) this.x = 0;
-                if (this.y < 0) this.y = height;
-                if (this.y > height) this.y = 0;
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < 0) this.x = width; if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
             }
-            draw() {
-                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
         }
-
-        for (let i = 0; i < 100; i++) { particles.push(new Particle()); }
-
-        function animate() {
-            ctx.clearRect(0, 0, width, height);
-            particles.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animate);
-        }
+        for (let i = 0; i < 100; i++) particles.push(new Particle());
+        function animate() { ctx.clearRect(0, 0, width, height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animate); }
         animate();
 
-        // --- 2. 滚动显现效果 ---
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    entry.target.style.opacity = 1;
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
+            entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); entry.target.style.opacity = 1; entry.target.style.transform = 'translateY(0)'; } });
         }, { threshold: 0.1 });
+        document.querySelectorAll('.observer-item').forEach(item => { item.style.opacity = 0; item.style.transform = 'translateY(50px)'; item.style.transition = 'all 1s ease-out'; observer.observe(item); });
+        
+        document.querySelector('.btn-explore').addEventListener('click', function(e) { e.preventDefault(); document.querySelector('#about').scrollIntoView({ behavior: 'smooth' }); });
 
-        document.querySelectorAll('.observer-item').forEach(item => {
-            item.style.opacity = 0;
-            item.style.transform = 'translateY(50px)';
-            item.style.transition = 'all 1s ease-out';
-            observer.observe(item);
-        });
-
-        document.querySelector('.btn-explore').addEventListener('click', function(e) {
-            e.preventDefault();
-            document.querySelector('#about').scrollIntoView({ behavior: 'smooth' });
-        });
-
-        // --- 3. 音乐播放逻辑 ---
         const audio = document.getElementById('bgm');
         const musicBtn = document.getElementById('music-btn');
         audio.volume = 0.4; 
-
         musicBtn.addEventListener('click', () => {
-            if (audio.paused) {
-                audio.play();
-                musicBtn.classList.add('playing');
-                let vol = 0;
-                audio.volume = 0;
-                let fadeIn = setInterval(() => {
-                    if (vol < 0.4) { vol += 0.05; audio.volume = vol; } 
-                    else { clearInterval(fadeIn); }
-                }, 200);
-            } else {
-                audio.pause();
-                musicBtn.classList.remove('playing');
-            }
+            if (audio.paused) { audio.play(); musicBtn.classList.add('playing'); let vol = 0; audio.volume = 0; let fadeIn = setInterval(() => { if (vol < 0.4) { vol += 0.05; audio.volume = vol; } else { clearInterval(fadeIn); } }, 200); } 
+            else { audio.pause(); musicBtn.classList.remove('playing'); }
         });
     </script>
 </body>
 </html>
-
+        
+        <!-- 模拟一个跳转链接 -->
+        <p><a href="https://www.baidu.com">点击这里去百度（测试返回）</a></p>
+        <p>当你点击上面链接，再按浏览器的“返回”按钮时，不会再让你输密码了。</p>
     </div>
 
     <script>
+        // 获取DOM元素
+        var gatekeeper = document.getElementById('gatekeeper');
+        var mainContent = document.getElementById('main-content');
+
+        // === 核心逻辑修改部分 ===
+
+        // 1. 页面一加载，先检查浏览器有没有“通行证”
+        window.onload = function() {
+            // 检查 sessionStorage 中是否有 'passed' 记录
+            if (sessionStorage.getItem('birthdayPassed') === 'true') {
+                // 如果有记录，直接放行
+                showPage();
+            }
+        };
+
         function checkAnswers() {
-            // 获取用户输入的值
-            var ans1 = document.getElementById('answer1').value.trim(); // trim() 去除前后空格
+            var ans1 = document.getElementById('answer1').value.trim();
             var ans2 = document.getElementById('answer2').value.trim();
             var errorMsg = document.getElementById('errorMsg');
-            var gatekeeper = document.getElementById('gatekeeper');
-            var mainContent = document.getElementById('main-content');
 
-            // 设定的正确答案
             var correctAnswer1 = "8.18";
             var correctAnswer2 = "2.07";
 
-            // 判断逻辑
             if (ans1 === correctAnswer1 && ans2 === correctAnswer2) {
-                // 答对了：隐藏验证层，显示主内容
-                gatekeeper.style.display = 'none';
-                mainContent.style.display = 'block';
+                // 2. 答对了，给浏览器发一个“通行证” (存储到 sessionStorage)
+                sessionStorage.setItem('birthdayPassed', 'true');
+                
+                // 显示页面
+                showPage();
             } else {
-                // 答错了：显示错误提示
                 errorMsg.style.display = 'block';
-                // 也可以选择清空输入框
-                // document.getElementById('answer1').value = '';
-                // document.getElementById('answer2').value = '';
             }
+        }
+
+        // 封装一个显示页面的函数
+        function showPage() {
+            gatekeeper.style.display = 'none';
+            mainContent.style.display = 'block';
         }
     </script>
 </body>
 </html>
+
