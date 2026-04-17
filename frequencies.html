@@ -3,92 +3,596 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>失落的波段 | Lost Frequencies</title>
+    <title>3D Cinema | Pro Media Controls & Stable NPCs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
     <style>
-        :root { --bg-color: #05070a; --text-primary: #e0e6ed; --accent-color: #64ffda; --glass-bg: rgba(255, 255, 255, 0.03); --glass-border: rgba(255, 255, 255, 0.05); }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background-color: var(--bg-color); color: var(--text-primary); font-family: 'PingFang SC', sans-serif; min-height: 100vh; }
-        #canvas-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.6; }
-        
-        header { padding: 2rem 10%; display: flex; align-items: center; backdrop-filter: blur(5px); position: sticky; top: 0; z-index: 10; }
-        .back-btn { color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
-        .back-btn:hover { color: var(--accent-color); }
-        .page-title { margin-left: auto; letter-spacing: 2px; color: var(--accent-color); font-family: monospace; }
-
-        .container { max-width: 900px; margin: 4rem auto; padding: 0 20px; }
-
-        /* 视频容器 */
-        .video-wrapper {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 2rem;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-        }
-        video { width: 100%; display: block; border-radius: 2px; }
-
-        /* 装饰性的波段动画 */
-        .frequency-viz {
-            display: flex; justify-content: center; gap: 5px; height: 60px; align-items: center; margin-bottom: 3rem;
-        }
-        .freq-bar {
-            width: 4px; background: var(--accent-color);
-            animation: wave 1s infinite ease-in-out;
-            border-radius: 2px;
-            box-shadow: 0 0 10px var(--accent-color);
-        }
-        @keyframes wave { 0%, 100% { height: 10px; opacity: 0.5; } 50% { height: 50px; opacity: 1; } }
-
-        .description { text-align: center; color: #94a3b8; max-width: 600px; margin: 0 auto; line-height: 1.8; }
-        
-        /* 随机化动画延迟 */
-        .freq-bar:nth-child(odd) { animation-duration: 0.8s; }
-        .freq-bar:nth-child(even) { animation-duration: 1.2s; }
-        .freq-bar:nth-child(3n) { animation-duration: 1.5s; }
+        :root { --accent-color: #64ffda; --portal-purple: #c21bf3; }
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        .hud { padding: 20px; text-align: center; color: var(--accent-color); text-shadow: 0 0 10px #000; }
+        .mc-hotbar { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; background: #333; border: 4px solid #000; padding: 2px; pointer-events: auto; z-index: 110; }
+        #video-console-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; flex-direction: column; justify-content: flex-end; align-items: center; z-index: 5000; pointer-events: auto; }
+        #video-controls { width: 75%; background: rgba(20, 20, 20, 0.98); padding: 25px; border-radius: 16px; border: 2px solid var(--accent-color); display: flex; flex-direction: column; gap: 20px; margin-bottom: 40px; box-shadow: 0 0 50px rgba(0, 0, 0, 1); }
+        .seeker-row { display: flex; width: 100%; align-items: center; gap: 15px; }
+        #time-slider { flex-grow: 1; cursor: pointer; accent-color: var(--accent-color); }
+        #time-display { color: #fff; font-size: 14px; min-width: 110px; font-family: monospace; }
+        .function-row { display: flex; width: 100%; justify-content: space-between; align-items: center; }
+        .control-group { display: flex; align-items: center; gap: 20px; }
+        .btn { background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 5px 15px; border-radius: 4px; cursor: pointer; font-family: inherit; transition: 0.2s; }
+        .btn:hover { background: var(--accent-color); color: #000; }
+        select { background: #111; color: var(--accent-color); border: 1px solid var(--accent-color); padding: 4px; border-radius: 4px; outline: none; }
+        .volume-box { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 13px; }
+        #volume-slider { width: 100px; accent-color: var(--accent-color); }
+        #blocker { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; color: var(--accent-color); font-size: 18px; cursor: pointer; z-index: 2000; text-align: center; }
+        .slot { width: 60px; height: 60px; border: 2px solid #8B8B8B; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; color: white; transition: 0.2s; }
+        .slot:hover { background: rgba(255,255,255,0.1); }
+        .slot.selected { border: 4px solid #fff; background: rgba(255,255,255,0.2); }
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a052d; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 6000; color: #fff; }
+        .load-bar-bg { width: 300px; height: 20px; background: #000; border: 2px solid #fff; margin-top: 20px; }
+        #load-progress { width: 0%; height: 100%; background: #c21bf3; transition: width 0.1s; }
+        #crosshair { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; pointer-events: none; z-index: 50; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: white; opacity: 0.8; }
+        #crosshair::before { left: 9px; width: 2px; height: 20px; } #crosshair::after { top: 9px; width: 20px; height: 2px; }
+        #file-input { display: none; }
+        #key-hint { position: fixed; left: 20px; bottom: 20px; color: rgba(255,255,255,0.5); font-size: 12px; line-height: 1.6; }
     </style>
 </head>
 <body>
-    <canvas id="canvas-bg"></canvas>
-    <header><a href="index.html" class="back-btn">&larr; Return</a><div class="page-title">SIGNAL_DETECTED</div></header>
 
-    <div class="container">
-        <!-- 视觉波形装饰 -->
-        <div class="frequency-viz">
-            <div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div>
-            <div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div>
-            <div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div><div class="freq-bar"></div>
-        </div>
+    <div id="crosshair"></div>
+    <div id="loading-screen">
+        <h2 id="load-text">维度解构中...</h2>
+        <div class="load-bar-bg"><div id="load-progress"></div></div>
+    </div>
 
-        <!-- 视频区域 (之前在 Letters 里的视频移到了这里) -->
-        <div class="video-wrapper">
-            <!-- 替换成你的视频文件 -->
-            <video controls autoplay muted loop>
-                <source src="https://cdn.pixabay.com/video/2020/12/13/59385-492982878_tiny.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-
-        <div class="description">
-            <h2>捕捉到的信号 #042</h2>
-            <br>
-            <p>这是一段来自深层网络的视觉回响。在剥离了色彩与噪音之后，留下的只有纯粹的律动。它代表了那些在深夜里被创造出来，却从未公开发布的“失落代码”。</p>
+    <div id="blocker">
+        <div id="blocker-content">
+            <b>[ 影院控制协议 ]</b><br><br>
+            W,A,S,D 移动 | Space 跳跃<br>
+            <b>[T] 键：开启/关闭媒体中心</b><br>
+            <b>[M] 键：切换剧情模式 / 真实动态影院</b><br>
+            <b>[V] 键：更换本地视频</b><br>
+            点击任意处继续
         </div>
     </div>
 
-    <!-- 复用背景JS -->
+    <div id="video-console-overlay">
+        <div id="video-controls">
+            <div class="seeker-row">
+                <span style="color:var(--accent-color); font-weight:bold;">PROGRESS</span>
+                <input type="range" id="time-slider" min="0" max="100" value="0">
+                <div id="time-display">00:00 / 00:00</div>
+            </div>
+
+            <div class="function-row">
+                <div class="control-group">
+                    <div class="volume-box">
+                        <span>🔊</span>
+                        <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1">
+                    </div>
+                    <div class="mode-box">
+                        <span style="color:#aaa; font-size:12px;">MODE:</span>
+                        <span id="mode-text" style="color:var(--accent-color); font-weight:bold;">STORY</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <button class="btn" onclick="switchTheaterMode()">切换模式 (M)</button>
+                    <button class="btn" onclick="toggleFullScreen()">全屏模式</button>
+                    <button class="btn" onclick="controls.lock()">退出控制 (T)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div class="hud">
+            <h2 id="status">STATUS: ONLINE</h2>
+            <p id="hint">方块: <span id="block-count">0</span> | 高度: <span id="height-val">2.0</span></p>
+        </div>
+        <div class="mc-hotbar" id="hotbar">
+            <div class="slot" title="选择本地视频" onclick="openFileSelector()">📁</div>
+            <div class="slot selected" id="slot-obsidian" data-item="obsidian">🧱</div>
+            <div class="slot" id="slot-torch" data-item="torch">🕯️</div>
+            <div class="slot" onclick="location.reload()">🔄</div>
+        </div>
+    </div>
+
+    <div id="key-hint">V: 选视频 | T: 媒体面板 | M: 切换模式<br>E: 释放鼠标 | 1/2: 切换物品</div>
+    <input type="file" id="file-input" accept="video/*">
+    <video id="video-element" loop muted playsinline crossorigin="anonymous" style="display:none">
+        <source src="https://vjs.zencdn.net/v/oceans.mp4" type="video/mp4">
+    </video>
+
     <script>
-        const canvas = document.getElementById('canvas-bg'); const ctx = canvas.getContext('2d');
-        let width, height, particles = [];
-        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
-        window.addEventListener('resize', resize); resize();
-        class Particle {
-            constructor() { this.x = Math.random()*width; this.y = Math.random()*height; this.vx = (Math.random()-0.5)*0.3; this.vy = (Math.random()-0.5)*0.3; this.size = Math.random()*2; this.alpha = Math.random()*0.5+0.1; }
-            update() { this.x+=this.vx; this.y+=this.vy; if(this.x<0)this.x=width;if(this.x>width)this.x=0;if(this.y<0)this.y=height;if(this.y>height)this.y=0; }
-            draw() { ctx.fillStyle=`rgba(255,255,255,${this.alpha})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+        let scene, camera, renderer, controls, raycaster;
+        let blocks = [], portalPlane = null;
+        let currentItem = 'obsidian', isTeleporting = false, dimensionChanged = false;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3(), direction = new THREE.Vector3();
+        const PLAYER_EYE_HEIGHT = 1.7;
+        let downRaycaster;
+        const video = document.getElementById('video-element');
+        
+        let theaterMode = 'story'; 
+        let stickman = null, stickmanState = 'sitting';
+        let stickmanTimer = 0;
+        let stickmanTargetScreenZ = 0;
+        let stickmanVelocityY = 0; // 剧情火柴人仍需要物理
+        
+        let cinemaNPCs = []; 
+        let emptySeats = []; 
+        const STICKMAN_WALK_SPEED = 3.8; 
+        const STICKMAN_GRAVITY = 39.2;
+        let stickmanRaycaster;
+
+        const slider = document.getElementById('time-slider');
+        const volumeSlider = document.getElementById('volume-slider');
+        const timeDisplay = document.getElementById('time-display');
+        const videoConsole = document.getElementById('video-console-overlay');
+        const blocker = document.getElementById('blocker');
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "00:00";
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
         }
-        for(let i=0;i<80;i++) particles.push(new Particle());
-        function animate(){ ctx.clearRect(0,0,width,height); particles.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(animate); } animate();
+
+        volumeSlider.addEventListener('input', () => {
+            video.volume = volumeSlider.value;
+            if (video.volume > 0) video.muted = false;
+        });
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else if (document.exitFullscreen) document.exitFullscreen();
+        }
+
+        let isDragging = false;
+        slider.addEventListener('mousedown', () => isDragging = true);
+        slider.addEventListener('mouseup', () => isDragging = false);
+        slider.addEventListener('input', () => { if (video.duration) video.currentTime = (slider.value / 100) * video.duration; });
+
+        videoConsole.addEventListener('click', (e) => { if (e.target === videoConsole) controls.lock(); });
+        function openFileSelector() { document.getElementById('file-input').click(); }
+
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                video.muted = false;
+                video.play();
+                document.getElementById('status').innerText = "VIDEO LOADED: " + file.name;
+                controls.lock();
+            }
+        });
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a12); 
+            scene.fog = new THREE.Fog(0x0a0a12, 0, 80);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 2, 8);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+            controls = new THREE.PointerLockControls(camera, document.body);
+            
+            blocker.addEventListener('click', () => {
+                if (!isTeleporting) {
+                    controls.lock();
+                    if (dimensionChanged) { video.muted = false; video.play(); }
+                }
+            });
+
+            controls.addEventListener('lock', () => { blocker.style.display = 'none'; videoConsole.style.display = 'none'; });
+            controls.addEventListener('unlock', () => { 
+                if (isTeleporting) return;
+                if (videoConsole.style.display !== 'flex') blocker.style.display = 'flex';
+            });
+
+            scene.add(controls.getObject());
+
+            document.addEventListener('keydown', (e) => {
+                if (isTeleporting) return;
+                if (e.code === 'KeyT') {
+                    if (videoConsole.style.display === 'flex') controls.lock();
+                    else { controls.unlock(); blocker.style.display = 'none'; videoConsole.style.display = 'flex'; }
+                }
+                if (e.code === 'KeyM' && dimensionChanged) switchTheaterMode();
+                if (e.code === 'KeyV') openFileSelector();
+                if (e.code === 'KeyE') controls.unlock();
+                if (e.code === 'KeyW') moveForward = true;
+                if (e.code === 'KeyS') moveBackward = true;
+                if (e.code === 'KeyA') moveLeft = true;
+                if (e.code === 'KeyD') moveRight = true;
+                if (e.code === 'Space' && canJump) { velocity.y += 20; canJump = false; }
+                if (e.code === 'Digit1') switchItem('obsidian');
+                if (e.code === 'Digit2') switchItem('torch');
+            });
+
+            document.addEventListener('keyup', (e) => {
+                if (e.code === 'KeyW') moveForward = false;
+                if (e.code === 'KeyS') moveBackward = false;
+                if (e.code === 'KeyA') moveLeft = false;
+                if (e.code === 'KeyD') moveRight = false;
+            });
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100), new THREE.MeshStandardMaterial({color:0x111111}));
+            ground.rotation.x = -Math.PI/2; ground.name = "ground"; scene.add(ground);
+            scene.add(new THREE.GridHelper(100, 50, 0x64ffda, 0x222222));
+            downRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, PLAYER_EYE_HEIGHT + 0.1);
+            stickmanRaycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
+            raycaster = new THREE.Raycaster();
+
+            document.addEventListener('mousedown', (event) => {
+                if (!controls.isLocked || dimensionChanged || isTeleporting) return;
+                raycaster.setFromCamera({x:0, y:0}, camera);
+                const intersects = raycaster.intersectObjects(scene.children);
+                if (intersects.length > 0) {
+                    const intersect = intersects.find(i => i.object.name === "ground" || i.object.name === "obsidian");
+                    if (!intersect) return;
+                    if (event.button === 0) {
+                        if (currentItem === 'obsidian') {
+                            const normal = intersect.face.normal.clone();
+                            const pos = new THREE.Vector3().copy(intersect.point).add(normal.multiplyScalar(0.5));
+                            const finalPos = new THREE.Vector3(Math.floor(pos.x)+0.5, Math.max(0.5, Math.floor(pos.y)+0.5), Math.floor(pos.z)+0.5);
+                            const block = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0x1a0b2a}));
+                            block.position.copy(finalPos); block.name = "obsidian"; scene.add(block); blocks.push(block);
+                            document.getElementById('block-count').innerText = blocks.length;
+                        } else if (currentItem === 'torch') { checkAndSpawnPortal(intersect.point); }
+                    } else if (event.button === 2) {
+                        if (intersect.object.name === "obsidian") {
+                            scene.remove(intersect.object);
+                            blocks = blocks.filter(b => b !== intersect.object);
+                            document.getElementById('block-count').innerText = blocks.length;
+                        }
+                    }
+                }
+            });
+            window.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        function switchItem(item) {
+            currentItem = item;
+            document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+            document.getElementById(item === 'obsidian' ? 'slot-obsidian' : 'slot-torch').classList.add('selected');
+        }
+
+        function checkAndSpawnPortal(point) {
+            if (portalPlane || blocks.length < 10) return;
+            let xs = blocks.map(b => Math.floor(b.position.x)), ys = blocks.map(b => Math.floor(b.position.y)), zs = blocks.map(b => Math.floor(b.position.z));
+            let minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys), minZ = Math.min(...zs), maxZ = Math.max(...zs);
+            if (((maxX-minX+1 === 4 && maxZ-minZ+1 === 1) || (maxZ-minZ+1 === 4 && maxX-minX+1 === 1)) && maxY-minY+1 === 5) {
+                portalPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 3), new THREE.MeshBasicMaterial({ color: 0xc21bf3, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
+                if(maxZ-minZ+1 === 4) portalPlane.rotation.y = Math.PI / 2;
+                portalPlane.position.set((minX + maxX)/2 + 0.5, (minY + maxY)/2 + 0.5, (minZ + maxZ)/2 + 0.5);
+                scene.add(portalPlane);
+                document.getElementById('status').innerText = "传送门激活";
+            }
+        }
+
+        function startTeleport() {
+            isTeleporting = true; controls.unlock();
+            document.getElementById('loading-screen').style.display = "flex";
+            let prog = 0;
+            const timer = setInterval(() => {
+                prog += 2; document.getElementById('load-progress').style.width = prog + "%";
+                if (prog >= 100) { clearInterval(timer); completeTravel(); }
+            }, 30);
+        }
+
+        function spawnStickmanAudience(posX, posY, posZ) {
+            const stickmanGroup = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), headMat);
+            head.position.set(0, 1.5, 0); head.rotation.x = -0.2; stickmanGroup.add(head);
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.65), bodyMat);
+            torso.position.set(0, 1.1, 0); stickmanGroup.add(torso);
+            ['leftArmPivot', 'rightArmPivot', 'leftLegPivot', 'rightLegPivot'].forEach((name, i) => {
+                const pivot = new THREE.Group(); pivot.name = name;
+                const limb = new THREE.Mesh(name.includes('Leg') ? new THREE.CylinderGeometry(0.04, 0.04, 0.8) : new THREE.CylinderGeometry(0.03, 0.03, 0.5), bodyMat);
+                limb.position.set(0, name.includes('Leg') ? -0.4 : -0.25, 0); pivot.add(limb);
+                pivot.position.set(i < 2 ? (i === 0 ? -0.15 : 0.15) : (i === 2 ? -0.1 : 0.1), i < 2 ? 1.35 : 0.8, 0);
+                if(i >= 2) pivot.rotation.x = -Math.PI/2; else pivot.rotation.x = 0.6;
+                stickmanGroup.add(pivot);
+            });
+            stickmanGroup.position.set(posX, posY, posZ);
+            scene.add(stickmanGroup);
+            return stickmanGroup;
+        }
+
+        // --- 稳定 NPC 管理逻辑 ---
+        function switchTheaterMode() {
+            if (!dimensionChanged) return;
+            theaterMode = (theaterMode === 'story' ? 'cinema' : 'story');
+            document.getElementById('mode-text').innerText = theaterMode.toUpperCase();
+            
+            cinemaNPCs.forEach(npc => scene.remove(npc));
+            cinemaNPCs = [];
+            if (stickman) scene.remove(stickman);
+            stickman = null;
+
+            if (theaterMode === 'story') {
+                // 剧情火柴人坐标 (第三排左侧)
+                stickman = spawnStickmanAudience(-5.5, 10.4, 17);
+                stickmanTimer = performance.now();
+                stickmanState = 'sitting';
+                stickmanVelocityY = 0; // 重置物理
+            } else {
+                populateCinema();
+            }
+        }
+
+        function populateCinema() {
+            const rows = 15, aisleWidth = 5, rowWidth = 20, rowDepth = 3.5, rowHeightStep = 0.8;
+            emptySeats = [];
+            for (let i = 0; i < rows; i++) {
+                const currentY = (rows - i) * rowHeightStep;
+                const currentZ = i * rowDepth + 10;
+                [-(rowWidth/2 + aisleWidth/2), (rowWidth/2 + aisleWidth/2)].forEach(posX => {
+                    for(let s=0; s<6; s++) {
+                        const seatX = posX + (s - 2.5) * 2.5;
+                        const seatData = { posX: seatX, currentY, currentZ };
+                        if (Math.random() > 0.4) {
+                            // 直接创建在座位上的观众
+                            cinemaNPCs.push(createCinemaNPC(seatData, 'sitting'));
+                        } else {
+                            emptySeats.push(seatData);
+                        }
+                    }
+                });
+            }
+        }
+
+        function createCinemaNPC(seatData, state) {
+            let startPos;
+            if (state === 'entering') {
+                // 稳定选座的关键：进场NPC初始高度就已经锁死在该台阶
+                startPos = new THREE.Vector3(0, seatData.currentY, 0); 
+            } else {
+                startPos = new THREE.Vector3(seatData.posX, seatData.currentY, seatData.currentZ);
+            }
+            
+            const npc = spawnStickmanAudience(startPos.x, startPos.y, startPos.z);
+            
+            // 观影模式NPC不再需要 velY，我们将锁死 Y 轴
+            npc.userData = { 
+                offset: Math.random() * 100, 
+                isCouple: Math.random() > 0.8,
+                state: state,
+                seat: seatData,
+                timer: performance.now(),
+            };
+            return npc;
+        }
+
+        function completeTravel() {
+            document.getElementById('loading-screen').style.display = "none";
+            document.getElementById('hotbar').style.display = "none";
+            document.getElementById('status').innerText = "DIMENSION: GRAND CINEMA";
+            scene.background = new THREE.Color(0x000000); scene.fog = null;
+            scene.children.filter(c => c.name === "ground" || c.name === "obsidian" || c.type === "GridHelper" || c === portalPlane).forEach(g => scene.remove(g));
+            
+            const rowCount = 15, rowWidth = 20, aisleWidth = 5, rowDepth = 3.5, rowHeightStep = 0.8;
+            const seatMat = new THREE.MeshStandardMaterial({ color: 0x700000 });
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            let firstFloorY = 0; 
+
+            for (let i = 0; i < rowCount; i++) {
+                const currentY = (rowCount - i) * rowHeightStep; 
+                const currentZ = i * rowDepth + 10; 
+                if (i === 0) firstFloorY = currentY;
+                const floorGeo = new THREE.BoxGeometry(rowWidth, 0.6, rowDepth - 0.1);
+                [-(rowWidth/2 + aisleWidth/2), (rowWidth/2 + aisleWidth/2)].forEach(posX => {
+                    const floor = new THREE.Mesh(floorGeo, floorMat);
+                    floor.position.set(posX, currentY - 0.3, currentZ);
+                    floor.name = "cinema_collision"; scene.add(floor);
+                    for(let s=0; s<6; s++) {
+                        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1, 0.8), seatMat);
+                        seat.position.set(posX + (s - 2.5) * 2.5, currentY + 0.3, currentZ); 
+                        scene.add(seat);
+                    }
+                });
+            }
+
+            const totalAisleLen = rowCount * rowDepth + 10;
+            const aisle = new THREE.Mesh(new THREE.BoxGeometry(aisleWidth, 0.5, totalAisleLen), floorMat);
+            aisle.position.set(0, (rowCount * rowHeightStep)/2, totalAisleLen/2);
+            aisle.rotation.x = Math.atan((rowCount * rowHeightStep) / totalAisleLen);
+            aisle.name = "cinema_collision"; scene.add(aisle);
+            
+            const frontPlate = new THREE.Mesh(new THREE.BoxGeometry(80, 0.5, 40), floorMat);
+            const frontZ = totalAisleLen + 15; frontPlate.position.set(0, -0.25, frontZ);
+            frontPlate.name = "cinema_collision"; scene.add(frontPlate);
+            stickmanTargetScreenZ = frontZ + 12;
+
+            // 初始剧情模式火柴人坐标
+            stickman = spawnStickmanAudience(-5.5, 10.4, 17); 
+            stickmanTimer = performance.now(); 
+            stickmanState = 'sitting';
+            stickmanVelocityY = 0;
+
+            const videoTexture = new THREE.VideoTexture(video); videoTexture.wrapS = THREE.RepeatWrapping; videoTexture.repeat.x = -1; 
+            const screen = new THREE.Mesh(new THREE.PlaneGeometry(48, 27), new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide }));
+            screen.position.set(0, 13.5, frontZ + 18); scene.add(screen);
+            
+            const light = new THREE.PointLight(0x64ffda, 1, 100); light.position.set(0, 5, frontZ + 10); scene.add(light);
+            velocity.set(0, 0, 0); controls.getObject().position.set(0, firstFloorY + PLAYER_EYE_HEIGHT + 2, 5);
+            dimensionChanged = true; isTeleporting = false; blocker.style.display = 'flex';
+            document.getElementById('blocker-content').innerHTML = "<b>[ 影院已加载 ]</b><br><br>按 [T] 媒体控制 | [M] 切换模式<br>点击背景返回";
+            video.play();
+        }
+
+        let lastEventTime = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+            let delta = (time - prevTime) / 1000;
+            if (delta > 0.1) delta = 0;
+
+            if (dimensionChanged && video.duration && !isDragging) {
+                slider.value = (video.currentTime / video.duration) * 100;
+                timeDisplay.innerText = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+            }
+
+            if (controls.isLocked) {
+                velocity.y -= 9.8 * 4.5 * delta;
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+                if (moveForward || moveBackward) velocity.z -= direction.z * 85.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 85.0 * delta;
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+                
+                const footPos = controls.getObject().position.clone();
+                downRaycaster.ray.origin.copy(footPos);
+                const collidables = scene.children.filter(c => c.name && (c.name.includes("collision") || c.name === "ground" || c.name === "obsidian"));
+                const intersects = downRaycaster.intersectObjects(collidables, true);
+                if (intersects.length > 0 && intersects[0].distance < PLAYER_EYE_HEIGHT) {
+                    velocity.y = Math.max(0, velocity.y);
+                    controls.getObject().position.y = intersects[0].point.y + PLAYER_EYE_HEIGHT;
+                    canJump = true;
+                } else {
+                    controls.getObject().position.y += (velocity.y * delta);
+                }
+                if (dimensionChanged && controls.getObject().position.y < -5) { controls.getObject().position.set(0, 15, 5); velocity.y = 0; }
+                if (portalPlane && !dimensionChanged && !isTeleporting && controls.getObject().position.distanceTo(portalPlane.position) < 1.5) startTeleport();
+                document.getElementById('height-val').innerText = controls.getObject().position.y.toFixed(1);
+            }
+
+            // --- Story 模式逻辑 (维持原有重力) ---
+            if (stickman && theaterMode === 'story') {
+                const leftLeg = stickman.getObjectByName('leftLegPivot');
+                const rightLeg = stickman.getObjectByName('rightLegPivot');
+                stickmanVelocityY -= STICKMAN_GRAVITY * delta;
+                stickman.position.y += stickmanVelocityY * delta;
+                stickmanRaycaster.ray.origin.set(stickman.position.x, stickman.position.y + 0.5, stickman.position.z);
+                const groundHits = stickmanRaycaster.intersectObjects(scene.children.filter(c => c.name === "cinema_collision"), true);
+                if (groundHits.length > 0 && groundHits[0].distance <= 0.52) { stickmanVelocityY = 0; stickman.position.y = groundHits[0].point.y; }
+
+                const elapsed = (time - stickmanTimer) / 1000;
+                if (stickmanState === 'sitting' && elapsed > 5) { stickmanState = 'standing'; stickmanTimer = time; }
+                if (stickmanState === 'standing') {
+                    const prog = Math.min(1, (time - stickmanTimer) / 500);
+                    leftLeg.rotation.x = rightLeg.rotation.x = -(Math.PI / 2) * (1 - prog);
+                    if (prog >= 1) { stickman.rotation.y = (Math.PI / 2) * -Math.sign(stickman.position.x); stickmanState = 'walking_to_aisle'; }
+                }
+                if (stickmanState.includes('walking')) {
+                    const limbSwing = Math.sin(time * 0.008) * 0.5;
+                    leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
+                    if (stickmanState === 'walking_to_aisle') {
+                        if (Math.abs(stickman.position.x) > 0.2) stickman.position.x += -Math.sign(stickman.position.x) * STICKMAN_WALK_SPEED * delta;
+                        else { stickmanState = 'turning'; stickmanTimer = time; }
+                    } else if (stickmanState === 'walking_to_screen') {
+                        if (stickman.position.z < stickmanTargetScreenZ) stickman.position.z += STICKMAN_WALK_SPEED * delta;
+                        else stickmanState = 'arrived';
+                    }
+                }
+                if (stickmanState === 'turning') {
+                    const prog = Math.min(1, (time - stickmanTimer) / 500);
+                    const startRot = (Math.PI / 2) * -Math.sign(stickman.position.x);
+                    stickman.rotation.y = startRot + (0 - startRot) * prog;
+                    if (prog >= 1) stickmanState = 'walking_to_screen';
+                }
+            }
+
+            // --- Cinema 模式：完美碰撞管理逻辑 ---
+            if (theaterMode === 'cinema') {
+                if (time - lastEventTime > 5000 + Math.random() * 5000) {
+                    lastEventTime = time;
+                    if (Math.random() > 0.5 && cinemaNPCs.length > 10) {
+                        const idx = Math.floor(Math.random() * cinemaNPCs.length);
+                        const npc = cinemaNPCs[idx];
+                        if (npc.userData.state === 'sitting') { ud = npc.userData; ud.state = 'leaving_stand'; ud.timer = time; }
+                    } else if (emptySeats.length > 0) {
+                        const seatIdx = Math.floor(Math.random() * emptySeats.length);
+                        const seat = emptySeats.splice(seatIdx, 1)[0];
+                        cinemaNPCs.push(createCinemaNPC(seat, 'entering'));
+                    }
+                }
+
+                cinemaNPCs.forEach((npc, idx) => {
+                    const ud = npc.userData;
+                    const leftLeg = npc.getObjectByName('leftLegPivot');
+                    const rightLeg = npc.getObjectByName('rightLegPivot');
+                    const head = npc.children.find(c => c.geometry.type === 'SphereGeometry');
+
+                    // 1. 物理锁死 Y 轴：Cinema模式NPC不再计算重力，高度直接锁死在目标台阶平面
+                    // 彻底解决进出时踩空掉落。
+                    npc.position.y = ud.seat.currentY; 
+
+                    // 2. 状态机稳定行为
+                    const phase = time * 0.001 + ud.offset;
+                    const limbSwing = Math.sin(time * 0.008) * 0.5;
+
+                    if (ud.state === 'sitting') {
+                        head.rotation.y = Math.sin(phase * 0.5) * 0.1; head.rotation.x = -0.2 + Math.cos(phase * 0.3) * 0.05;
+                        if (ud.isCouple) npc.rotation.z = Math.sin(phase * 0.2) * 0.05;
+                    } 
+                    else if (ud.state === 'entering') {
+                        // 进场：严格沿台阶平面走向目标排
+                        leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
+                        const distZ = Math.abs(npc.position.z - ud.seat.currentZ);
+                        if (distZ > 0.5) {
+                            npc.position.z += (npc.position.z < ud.seat.currentZ ? 1 : -1) * STICKMAN_WALK_SPEED * delta;
+                            npc.rotation.y = (npc.position.z < ud.seat.currentZ ? 0 : Math.PI);
+                        } else { ud.state = 'entering_row'; }
+                    } 
+                    else if (ud.state === 'entering_row') {
+                        // 进入座位：横向移动选座
+                        leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
+                        const distX = Math.abs(npc.position.x - ud.seat.posX);
+                        if (distX > 0.1) {
+                            npc.position.x += (npc.position.x < ud.seat.posX ? 1 : -1) * STICKMAN_WALK_SPEED * delta;
+                            npc.rotation.y = (npc.position.x < ud.seat.posX ? -Math.PI/2 : Math.PI/2);
+                        } else {
+                            ud.state = 'sitting'; npc.rotation.y = 0;
+                            leftLeg.rotation.x = rightLeg.rotation.x = -Math.PI/2;
+                        }
+                    }
+                    else if (ud.state === 'leaving_stand') {
+                        const prog = Math.min(1, (time - ud.timer) / 500);
+                        leftLeg.rotation.x = rightLeg.rotation.x = -(Math.PI / 2) * (1 - prog);
+                        if (prog >= 1) { ud.state = 'leaving_to_aisle'; npc.rotation.y = (npc.position.x > 0 ? -Math.PI/2 : Math.PI/2); }
+                    }
+                    else if (ud.state === 'leaving_to_aisle') {
+                        leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
+                        if (Math.abs(npc.position.x) > 0.2) npc.position.x += -Math.sign(npc.position.x) * STICKMAN_WALK_SPEED * delta;
+                        else { ud.state = 'leaving_out'; npc.rotation.y = Math.PI; }
+                    }
+                    else if (ud.state === 'leaving_out') {
+                        // 离场：沿台阶走向后方并消失
+                        leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
+                        npc.position.z -= STICKMAN_WALK_SPEED * delta;
+                        if (npc.position.z < 0) {
+                            emptySeats.push(ud.seat); // 还座
+                            scene.remove(npc); cinemaNPCs.splice(idx, 1);
+                        }
+                    }
+                });
+            }
+
+            prevTime = time; renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
