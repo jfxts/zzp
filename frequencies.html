@@ -36,9 +36,21 @@
         #crosshair::before { left: 9px; width: 2px; height: 20px; } #crosshair::after { top: 9px; width: 20px; height: 2px; }
         #file-input { display: none; }
         #key-hint { position: fixed; left: 20px; bottom: 20px; color: rgba(255,255,255,0.5); font-size: 12px; line-height: 1.6; }
+
+        /* ----- 新增：状态文字提示 (左上角) ----- */
+        .status-overlay {
+            position: fixed; top: 20px; left: 20px; z-index: 1000;
+            color: rgba(255, 255, 255, 0.4); font-size: 10px; letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
+
+    <div class="status-overlay">
+        [Esc] 返回主境 | [B] 切换 BGM
+    </div>
+
+    <audio id="bgm-cinema" loop><source src="bgm.mp3" type="audio/mpeg"></audio>
 
     <div id="crosshair"></div>
     <div id="loading-screen">
@@ -50,10 +62,9 @@
         <div id="blocker-content">
             <b>[ 影院控制协议 ]</b><br><br>
             W,A,S,D 移动 | Space 跳跃<br>
-            <b>[T] 键：开启/关闭媒体中心</b><br>
-            <b>[M] 键：切换剧情模式 / 真实动态影院</b><br>
-            <b>[V] 键：更换本地视频</b><br>
-            点击任意处继续
+            <b>[T] 键：媒体中心 | [Esc] 键：返回主界面</b><br>
+            <b>[M] 键：模式切换 | [B] 键：BGM开关</b><br>
+            点击任意处建立连接
         </div>
     </div>
 
@@ -99,13 +110,27 @@
         </div>
     </div>
 
-    <div id="key-hint">V: 选视频 | T: 媒体面板 | M: 切换模式<br>E: 释放鼠标 | 1/2: 切换物品</div>
+    <div id="key-hint">V: 选视频 | T: 媒体面板 | M: 切换模式<br>B: BGM 开关 | Esc: 返回主站 | 1/2: 切换物品</div>
     <input type="file" id="file-input" accept="video/*">
     <video id="video-element" loop muted playsinline crossorigin="anonymous" style="display:none">
         <source src="https://vjs.zencdn.net/v/oceans.mp4" type="video/mp4">
     </video>
 
     <script>
+        // --- 新增：跨页面 BGM 逻辑 ---
+        const audioC = document.getElementById('bgm-cinema');
+
+        function toggleCinemaBGM() {
+            if (audioC.paused) {
+                audioC.play();
+                sessionStorage.setItem('musicPlaying', 'true');
+            } else {
+                audioC.pause();
+                sessionStorage.setItem('musicPlaying', 'false');
+            }
+        }
+
+        // --- 原有 3D 逻辑核心 ---
         let scene, camera, renderer, controls, raycaster;
         let blocks = [], portalPlane = null;
         let currentItem = 'obsidian', isTeleporting = false, dimensionChanged = false;
@@ -120,7 +145,7 @@
         let stickman = null, stickmanState = 'sitting';
         let stickmanTimer = 0;
         let stickmanTargetScreenZ = 0;
-        let stickmanVelocityY = 0; // 剧情火柴人仍需要物理
+        let stickmanVelocityY = 0; 
         
         let cinemaNPCs = []; 
         let emptySeats = []; 
@@ -190,6 +215,10 @@
                 if (!isTeleporting) {
                     controls.lock();
                     if (dimensionChanged) { video.muted = false; video.play(); }
+                    // 初始化 BGM 状态
+                    if (sessionStorage.getItem('musicPlaying') === 'true') {
+                        audioC.play().catch(()=>{});
+                    }
                 }
             });
 
@@ -201,8 +230,21 @@
 
             scene.add(controls.getObject());
 
+            // --- 核心按键触发逻辑修改 ---
             document.addEventListener('keydown', (e) => {
                 if (isTeleporting) return;
+                
+                // 1. [Esc] 返回主界面 (只有在锁定视角时 Esc 会触发 unlock)
+                if (e.code === 'Escape') {
+                    // 如果已经解锁且不在媒体中心，执行跳转
+                    if (!controls.isLocked && videoConsole.style.display !== 'flex') {
+                        window.location.href = "index.html";
+                    }
+                }
+
+                // 2. [B] BGM 开关
+                if (e.code === 'KeyB') toggleCinemaBGM();
+
                 if (e.code === 'KeyT') {
                     if (videoConsole.style.display === 'flex') controls.lock();
                     else { controls.unlock(); blocker.style.display = 'none'; videoConsole.style.display = 'flex'; }
@@ -312,7 +354,6 @@
             return stickmanGroup;
         }
 
-        // --- 稳定 NPC 管理逻辑 ---
         function switchTheaterMode() {
             if (!dimensionChanged) return;
             theaterMode = (theaterMode === 'story' ? 'cinema' : 'story');
@@ -324,11 +365,10 @@
             stickman = null;
 
             if (theaterMode === 'story') {
-                // 剧情火柴人坐标 (第三排左侧)
                 stickman = spawnStickmanAudience(-5.5, 10.4, 17);
                 stickmanTimer = performance.now();
                 stickmanState = 'sitting';
-                stickmanVelocityY = 0; // 重置物理
+                stickmanVelocityY = 0; 
             } else {
                 populateCinema();
             }
@@ -345,7 +385,6 @@
                         const seatX = posX + (s - 2.5) * 2.5;
                         const seatData = { posX: seatX, currentY, currentZ };
                         if (Math.random() > 0.4) {
-                            // 直接创建在座位上的观众
                             cinemaNPCs.push(createCinemaNPC(seatData, 'sitting'));
                         } else {
                             emptySeats.push(seatData);
@@ -358,15 +397,11 @@
         function createCinemaNPC(seatData, state) {
             let startPos;
             if (state === 'entering') {
-                // 稳定选座的关键：进场NPC初始高度就已经锁死在该台阶
                 startPos = new THREE.Vector3(0, seatData.currentY, 0); 
             } else {
                 startPos = new THREE.Vector3(seatData.posX, seatData.currentY, seatData.currentZ);
             }
-            
             const npc = spawnStickmanAudience(startPos.x, startPos.y, startPos.z);
-            
-            // 观影模式NPC不再需要 velY，我们将锁死 Y 轴
             npc.userData = { 
                 offset: Math.random() * 100, 
                 isCouple: Math.random() > 0.8,
@@ -417,7 +452,6 @@
             frontPlate.name = "cinema_collision"; scene.add(frontPlate);
             stickmanTargetScreenZ = frontZ + 12;
 
-            // 初始剧情模式火柴人坐标
             stickman = spawnStickmanAudience(-5.5, 10.4, 17); 
             stickmanTimer = performance.now(); 
             stickmanState = 'sitting';
@@ -430,7 +464,7 @@
             const light = new THREE.PointLight(0x64ffda, 1, 100); light.position.set(0, 5, frontZ + 10); scene.add(light);
             velocity.set(0, 0, 0); controls.getObject().position.set(0, firstFloorY + PLAYER_EYE_HEIGHT + 2, 5);
             dimensionChanged = true; isTeleporting = false; blocker.style.display = 'flex';
-            document.getElementById('blocker-content').innerHTML = "<b>[ 影院已加载 ]</b><br><br>按 [T] 媒体控制 | [M] 切换模式<br>点击背景返回";
+            document.getElementById('blocker-content').innerHTML = "<b>[ 影院已加载 ]</b><br><br>按 [T] 媒体中心 | [M] 切换模式<br>按 [B] BGM开关 | [Esc] 返回主境";
             video.play();
         }
 
@@ -474,7 +508,6 @@
                 document.getElementById('height-val').innerText = controls.getObject().position.y.toFixed(1);
             }
 
-            // --- Story 模式逻辑 (维持原有重力) ---
             if (stickman && theaterMode === 'story') {
                 const leftLeg = stickman.getObjectByName('leftLegPivot');
                 const rightLeg = stickman.getObjectByName('rightLegPivot');
@@ -510,7 +543,6 @@
                 }
             }
 
-            // --- Cinema 模式：完美碰撞管理逻辑 ---
             if (theaterMode === 'cinema') {
                 if (time - lastEventTime > 5000 + Math.random() * 5000) {
                     lastEventTime = time;
@@ -530,12 +562,7 @@
                     const leftLeg = npc.getObjectByName('leftLegPivot');
                     const rightLeg = npc.getObjectByName('rightLegPivot');
                     const head = npc.children.find(c => c.geometry.type === 'SphereGeometry');
-
-                    // 1. 物理锁死 Y 轴：Cinema模式NPC不再计算重力，高度直接锁死在目标台阶平面
-                    // 彻底解决进出时踩空掉落。
                     npc.position.y = ud.seat.currentY; 
-
-                    // 2. 状态机稳定行为
                     const phase = time * 0.001 + ud.offset;
                     const limbSwing = Math.sin(time * 0.008) * 0.5;
 
@@ -544,7 +571,6 @@
                         if (ud.isCouple) npc.rotation.z = Math.sin(phase * 0.2) * 0.05;
                     } 
                     else if (ud.state === 'entering') {
-                        // 进场：严格沿台阶平面走向目标排
                         leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
                         const distZ = Math.abs(npc.position.z - ud.seat.currentZ);
                         if (distZ > 0.5) {
@@ -553,7 +579,6 @@
                         } else { ud.state = 'entering_row'; }
                     } 
                     else if (ud.state === 'entering_row') {
-                        // 进入座位：横向移动选座
                         leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
                         const distX = Math.abs(npc.position.x - ud.seat.posX);
                         if (distX > 0.1) {
@@ -575,11 +600,10 @@
                         else { ud.state = 'leaving_out'; npc.rotation.y = Math.PI; }
                     }
                     else if (ud.state === 'leaving_out') {
-                        // 离场：沿台阶走向后方并消失
                         leftLeg.rotation.x = limbSwing; rightLeg.rotation.x = -limbSwing;
                         npc.position.z -= STICKMAN_WALK_SPEED * delta;
                         if (npc.position.z < 0) {
-                            emptySeats.push(ud.seat); // 还座
+                            emptySeats.push(ud.seat); 
                             scene.remove(npc); cinemaNPCs.splice(idx, 1);
                         }
                     }
